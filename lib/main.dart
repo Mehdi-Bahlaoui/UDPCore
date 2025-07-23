@@ -118,7 +118,7 @@ class _MainAppState extends State<MainApp> {
         onBackTap: () => setState(() => _selectedPage = 'controller'),
       );
     } else {
-      return AboutUsPage(
+      return AboutThisApp(
         onBackTap: () => setState(() => _selectedPage = 'controller'),
       );
     }
@@ -283,10 +283,10 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 }
 
-class AboutUsPage extends StatelessWidget {
+class AboutThisApp extends StatelessWidget {
   final VoidCallback onBackTap;
 
-  AboutUsPage({required this.onBackTap});
+  AboutThisApp({required this.onBackTap});
 
   @override
   Widget build(BuildContext context) {
@@ -301,9 +301,18 @@ class AboutUsPage extends StatelessWidget {
       ),
       body: Center(
         child: Text(
-          "About Us Content\n\n"
-              "This is the About Us page for the UDP Controller App.\n"
-              "Add your app details, team information, or other content here.",
+          "About This App:\n\n"
+              "ESDPCore is a fast and seamless ESP device control for robotics and IoT via the UDP Protocol.\n"
+              "UDP is a connectionless protocol meaning it doesn't waste time on the handshake and other useless operations that could affect latency.\n"
+              "ESPulse is a fast and seamless ESP device control for robotics and IoT via UDP.\n"
+            "UDP skips handshakes for minimal latency, though with reduced delivery reliability.\n"
+            "The purpose of this app was and will continue to be providing the fastest interface for interaction with microcontrollers of the ESP family and others, without the worry of latency.\n\n"
+            "Future Updates include:\n"
+            "1) Adding a reception label, to be able to receive Data from the Esp (ie. Sensor readings).\n"
+            "2) improved UI and addition of other controls like other buttons and sliders.\n\n"
+            "Thank you so much for supporting this project <3",
+
+
           style: TextStyle(fontSize: 18),
           textAlign: TextAlign.center,
         ),
@@ -464,12 +473,13 @@ class _ControllerPageState extends State<ControllerPage> {
           right: 20,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
             children: [
+
+
+
               // Status labels
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
+              Container(
                     padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.6),
@@ -490,29 +500,8 @@ class _ControllerPageState extends State<ControllerPage> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 10),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      "Not Receiving",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(width: buttonSize * 0.5), // Gap between labels and directional pad
+
+
               // Directional pad
               Column(
                 children: [
@@ -561,19 +550,11 @@ class _ControllerPageState extends State<ControllerPage> {
           child: Container(
             width: buttonSize * 0.7,
             height: buttonSize * 0.7,
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.6),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
             child: IconButton(
               icon: Icon(
                 Icons.settings,
-                size: buttonSize * 0.35,
-                color: Colors.white,
+                size: buttonSize * 0.5,
+                color: Colors.black38,
               ),
               onPressed: widget.onSettingsTap,
               tooltip: 'Go to Settings',
@@ -588,19 +569,11 @@ class _ControllerPageState extends State<ControllerPage> {
           child: Container(
             width: buttonSize * 0.7,
             height: buttonSize * 0.7,
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.6),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
             child: IconButton(
               icon: Icon(
                 Icons.info,
-                size: buttonSize * 0.35,
-                color: Colors.white,
+                size: buttonSize * 0.5,
+                color: Colors.black38,
               ),
               onPressed: widget.onAboutTap, // Use callback
               tooltip: 'About Us',
