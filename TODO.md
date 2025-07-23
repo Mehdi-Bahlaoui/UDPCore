@@ -2,17 +2,13 @@
 
 2. **Write the About page**  
 
-3. **Check into GitHub licensing**  
-   Research open-source licenses (e.g., MIT, Apache 2.0) on GitHub’s documentation or choosealicense.com. Choose one that suits your goals, like allowing reuse with credit, and add it to your repo.
+3. **Added GPL 3 License**  
 
-4. **Add a subtle background**  
-   Apply a light, non-distracting background across the app, like a simple color or gradient.
+4. **Added a subtle background** 
 
-5. **Fix the settings icon**  
-   Update or redesign the settings icon to match the app’s style.
+5. **Fixed the settings icon** 
 
 6. **Set up a public GitHub repository**  
-   Create a public GitHub repo, push your app’s code, and write a clear README explaining the project’s purpose, setup instructions, and usage. Ensure sensitive data (e.g., API keys) is removed or stored in a `.gitignore` file. Add the chosen license file.
 
 7. **Create an app icon**  
    Design a memorable icon that looks good at small sizes for the Play Store and home screens.
