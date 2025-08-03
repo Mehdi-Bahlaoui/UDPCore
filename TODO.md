@@ -1,20 +1,5 @@
-1. **Name the app** : UDPCore
+Fix Folder name mismatch
 
-2. **Write the About page**  
-
-3. **Added GPL 3 License**  
-
-4. **Added a subtle background** 
-
-5. **Fixed the settings icon** 
-
-6. **Set up a public GitHub repository**  
-
-7. **Create an app icon**  
-   Design a memorable icon that looks good at small sizes for the Play Store and home screens.
-
-8. **Polish the UI**  
-   Adjust button colors and fix margins on buttons and the display for better spacing. Test for consistency.
 
 9. **Test everything**  
    Run the app on multiple devices to check for bugs and ensure UI changes look good.

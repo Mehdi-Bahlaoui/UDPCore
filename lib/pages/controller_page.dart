@@ -25,6 +25,7 @@ class _ControllerPageState extends State<ControllerPage> {
   bool _socketReady = false;
   Timer? _sendTimer;
   String _currentCommand = "";
+  String _pressedButton = ""; // Track which button is currently pressed
 
   @override
   void initState() {
@@ -55,6 +56,7 @@ class _ControllerPageState extends State<ControllerPage> {
       );
       setState(() {
         _currentCommand = widget.settings.stopCommand;
+        _pressedButton = ""; // Clear pressed state when stopping
       });
     }
     _sendTimer?.cancel();
@@ -67,43 +69,53 @@ class _ControllerPageState extends State<ControllerPage> {
         double size = 80,
         Color? color,
       }) {
+    bool isPressed = _pressedButton == command;
+
     return Listener(
       onPointerDown: (_) {
-        HapticFeedback.lightImpact();
+        HapticFeedback.heavyImpact(); // Changed from lightImpact to heavyImpact for stronger vibration
+        setState(() {
+          _pressedButton = command; // Set pressed state
+        });
         _startSending(command);
       },
       onPointerUp: (_) {
-        HapticFeedback.selectionClick();
+        HapticFeedback.mediumImpact(); // Changed from selectionClick to mediumImpact for stronger vibration
+        setState(() {
+          _pressedButton = ""; // Clear pressed state
+        });
         _stopSending();
       },
       onPointerCancel: (_) {
-        HapticFeedback.selectionClick();
+        HapticFeedback.mediumImpact(); // Changed from selectionClick to mediumImpact for stronger vibration
+        setState(() {
+          _pressedButton = ""; // Clear pressed state
+        });
         _stopSending();
       },
       child: Container(
         width: size,
         height: size,
-        margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        margin: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
-          color: color ??
-              (_currentCommand == command
-                  ? Colors.blueAccent.withOpacity(0.9)
-                  : Colors.blue.withOpacity(0.8)),
+          color: isPressed
+              ? Colors.white.withValues(alpha: 0.9) // Much lighter when pressed
+              : (color ?? Colors.blue.withValues(alpha: 0.8)), // Default color when not pressed
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 6,
               offset: Offset(0, 3),
             ),
           ],
-          border: Border.all(color: Colors.white.withOpacity(0.8), width: 2),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 2),
         ),
         child: Center(
           child: Icon(
             icon,
             size: size * 0.5,
-            color: Colors.white,
+            color: isPressed ? Colors.grey : Colors.white, // Grey arrows when pressed, white when not
           ),
         ),
       ),
@@ -120,7 +132,7 @@ class _ControllerPageState extends State<ControllerPage> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    final buttonSize = min(screenSize.width * 0.15, screenSize.height * 0.2);
+    final buttonSize = min(screenSize.width * 0.14, screenSize.height * 0.18); // Slightly smaller
 
     return Stack(
       clipBehavior: Clip.none,
@@ -140,33 +152,38 @@ class _ControllerPageState extends State<ControllerPage> {
         // Main control area
         Positioned(
           top: screenSize.height * 0.2,
-          left: 20,
-          right: 20,
+          left: 12, // Reduced from 20
+          right: 12, // Reduced from 20
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               // Status labels
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
-                    width: 1,
+              Flexible( // Added Flexible to prevent overflow
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12), // Reduced horizontal padding
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
                   ),
-                ),
-                child: Text(
-                  _currentCommand.isEmpty
-                      ? "Ready | ${widget.settings.targetIp}:${widget.settings.targetPort}"
-                      : "Sending: $_currentCommand",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                  child: Text(
+                    _currentCommand.isEmpty
+                        ? "Ready | ${widget.settings.targetIp}:${widget.settings.targetPort}"
+                        : "Sending: $_currentCommand",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18, // Slightly smaller font
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis, // Added overflow handling
                   ),
                 ),
               ),
+
+              SizedBox(width: 8), // Added small spacing
 
               // Directional pad
               Column(
@@ -177,7 +194,7 @@ class _ControllerPageState extends State<ControllerPage> {
                     size: buttonSize,
                     color: Colors.black38,
                   ),
-                  SizedBox(height: 6),
+                  SizedBox(height: 4), // Reduced spacing
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -187,7 +204,7 @@ class _ControllerPageState extends State<ControllerPage> {
                         size: buttonSize,
                         color: Colors.black38,
                       ),
-                      SizedBox(width: buttonSize * 1.2),
+                      SizedBox(width: buttonSize * 1.0), // Reduced spacing between buttons
                       _controlButton(
                         Icons.arrow_forward,
                         widget.settings.rightCommand,
@@ -196,7 +213,7 @@ class _ControllerPageState extends State<ControllerPage> {
                       ),
                     ],
                   ),
-                  SizedBox(height: 6),
+                  SizedBox(height: 4), // Reduced spacing
                   _controlButton(
                     Icons.arrow_downward,
                     widget.settings.backwardCommand,

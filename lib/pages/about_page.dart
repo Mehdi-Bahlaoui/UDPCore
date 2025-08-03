@@ -22,7 +22,6 @@ class AboutThisApp extends StatelessWidget {
           child: Text(
             "UDPCore is a fast and seamless ESP device control for robotics and IoT via the UDP Protocol.\n"
                 "UDP is a connectionless protocol meaning it doesn't waste time on the handshake and other useless operations that could affect latency.\n"
-                "ESPulse is a fast and seamless ESP device control for robotics and IoT via UDP.\n"
                 "UDP skips handshakes for minimal latency, though with reduced delivery reliability.\n"
                 "The purpose of this app was and will continue to be providing the fastest interface for interaction with microcontrollers of the ESP family and others, without the worry of latency.\n\n"
                 "Future Updates include:\n"

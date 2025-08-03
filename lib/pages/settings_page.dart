@@ -103,35 +103,82 @@ class _SettingsPageState extends State<SettingsPage> {
                 decoration: InputDecoration(labelText: "Target Port"),
               ),
               SizedBox(height: 10),
+
+
               TextField(
                 controller: _speedController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(labelText: "Hold Send Interval (ms)"),
               ),
               SizedBox(height: 10),
-              TextField(
-                controller: _forwardController,
-                decoration: InputDecoration(labelText: "Forward Command"),
-              ),
-              SizedBox(height: 10),
-              TextField(
-                controller: _leftController,
-                decoration: InputDecoration(labelText: "Left Command"),
-              ),
-              SizedBox(height: 10),
-              TextField(
-                controller: _backwardController,
-                decoration: InputDecoration(labelText: "Backward Command"),
-              ),
-              SizedBox(height: 10),
-              TextField(
-                controller: _rightController,
-                decoration: InputDecoration(labelText: "Right Command"),
-              ),
-              SizedBox(height: 10),
-              TextField(
-                controller: _stopController,
-                decoration: InputDecoration(labelText: "Stop Command"),
+
+              // Horizontal rule for visual separation
+              // Divider(
+              //   thickness: 2,
+              //   color: Colors.grey[400],
+              //   height: 30,
+              // ),
+              SizedBox(height: 50),
+
+              // Command settings in table format
+              Table(
+                columnWidths: {
+                  0: FlexColumnWidth(1),
+                  1: FlexColumnWidth(1),
+                },
+                children: [
+                  TableRow(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.only(right: 8.0, bottom: 10.0),
+                        child: TextField(
+                          controller: _forwardController,
+                          decoration: InputDecoration(labelText: "Forward Command"),
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.only(left: 8.0, bottom: 10.0),
+                        child: TextField(
+                          controller: _leftController,
+                          decoration: InputDecoration(labelText: "Left Command"),
+                        ),
+                      ),
+                    ],
+                  ),
+                  TableRow(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.only(right: 8.0, bottom: 10.0),
+                        child: TextField(
+                          controller: _backwardController,
+                          decoration: InputDecoration(labelText: "Backward Command"),
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.only(left: 8.0, bottom: 10.0),
+                        child: TextField(
+                          controller: _rightController,
+                          decoration: InputDecoration(labelText: "Right Command"),
+                        ),
+                      ),
+                    ],
+                  ),
+                  TableRow(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.only(right: 8.0, bottom: 10.0),
+                        child: TextField(
+                          controller: _stopController,
+                          decoration: InputDecoration(labelText: "Stop Command"),
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.only(left: 8.0, bottom: 10.0),
+                        child: Container(), // Empty cell
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
