@@ -3,7 +3,9 @@ description: "UDPCore: Fast, seamless ESP device control for robotics and IoT vi
 
 
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.3+4
+
+
 
 environment:
   sdk: ^3.7.2

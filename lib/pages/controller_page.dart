@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/scheduler.dart';
 import '../models/settings_model.dart';
 
 class ControllerPage extends StatefulWidget {
@@ -23,6 +24,8 @@ class ControllerPage extends StatefulWidget {
 class _ControllerPageState extends State<ControllerPage> {
   RawDatagramSocket? _socket;
   bool _socketReady = false;
+  bool _isInitializing = true;
+  String _connectionStatus = "Initializing...";
   Timer? _sendTimer;
   String _currentCommand = "";
   String _pressedButton = ""; // Track which button is currently pressed
@@ -30,37 +33,96 @@ class _ControllerPageState extends State<ControllerPage> {
   @override
   void initState() {
     super.initState();
-    RawDatagramSocket.bind(InternetAddress.anyIPv4, 0).then((socket) {
-      _socket = socket;
-      _socketReady = true;
-    });
+    _initializeSocket();
+  }
+
+  Future<void> _initializeSocket() async {
+    try {
+      setState(() {
+        _connectionStatus = "Connecting...";
+        _isInitializing = true;
+      });
+
+      final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+
+      if (mounted) {
+        setState(() {
+          _socket = socket;
+          _socketReady = true;
+          _isInitializing = false;
+          _connectionStatus = "Connected";
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _socketReady = false;
+          _isInitializing = false;
+          _connectionStatus = "Connection failed: $e";
+        });
+      }
+      // Retry after 3 seconds
+      Timer(Duration(seconds: 3), () {
+        if (mounted) _initializeSocket();
+      });
+    }
   }
 
   void _startSending(String command) {
-    if (!_socketReady || _socket == null) return;
+    if (!_socketReady || _socket == null) {
+      print("Socket not ready for command: $command");
+      return;
+    }
+
     _sendTimer?.cancel();
     _sendTimer = Timer.periodic(Duration(milliseconds: widget.settings.speed), (_) {
-      _socket!.send(command.codeUnits, InternetAddress(widget.settings.targetIp), widget.settings.targetPort);
-      setState(() {
-        _currentCommand = command;
-      });
+      try {
+        final bytesSent = _socket!.send(
+          command.codeUnits,
+          InternetAddress(widget.settings.targetIp),
+          widget.settings.targetPort
+        );
+        print("Sent $bytesSent bytes: $command");
+
+        if (mounted) {
+          setState(() {
+            _currentCommand = command;
+          });
+        }
+      } catch (e) {
+        print("Error sending command: $e");
+        if (mounted) {
+          setState(() {
+            _connectionStatus = "Send error: $e";
+          });
+        }
+      }
     });
   }
 
   void _stopSending() {
-    if (_socketReady && _socket != null) {
-      _socket!.send(
-        widget.settings.stopCommand.codeUnits,
-        InternetAddress(widget.settings.targetIp),
-        widget.settings.targetPort,
-      );
-      setState(() {
-        _currentCommand = widget.settings.stopCommand;
-        _pressedButton = ""; // Clear pressed state when stopping
-      });
-    }
     _sendTimer?.cancel();
     _sendTimer = null;
+
+    if (_socketReady && _socket != null) {
+      try {
+        _socket!.send(
+          widget.settings.stopCommand.codeUnits,
+          InternetAddress(widget.settings.targetIp),
+          widget.settings.targetPort,
+        );
+        print("Sent stop command: ${widget.settings.stopCommand}");
+
+        if (mounted) {
+          setState(() {
+            _currentCommand = widget.settings.stopCommand;
+            _pressedButton = ""; // Clear pressed state when stopping
+          });
+        }
+      } catch (e) {
+        print("Error sending stop command: $e");
+      }
+    }
   }
 
   Widget _controlButton(
@@ -73,24 +135,42 @@ class _ControllerPageState extends State<ControllerPage> {
 
     return Listener(
       onPointerDown: (_) {
-        HapticFeedback.heavyImpact(); // Changed from lightImpact to heavyImpact for stronger vibration
-        setState(() {
-          _pressedButton = command; // Set pressed state
-        });
+        if (!_socketReady) return; // Don't allow interaction if socket not ready
+
+        HapticFeedback.heavyImpact();
+        print("Button pressed: $command");
+
+        if (mounted) {
+          setState(() {
+            _pressedButton = command;
+          });
+        }
         _startSending(command);
       },
       onPointerUp: (_) {
-        HapticFeedback.mediumImpact(); // Changed from selectionClick to mediumImpact for stronger vibration
-        setState(() {
-          _pressedButton = ""; // Clear pressed state
-        });
+        if (!_socketReady) return;
+
+        HapticFeedback.mediumImpact();
+        print("Button released: $command");
+
+        if (mounted) {
+          setState(() {
+            _pressedButton = "";
+          });
+        }
         _stopSending();
       },
       onPointerCancel: (_) {
-        HapticFeedback.mediumImpact(); // Changed from selectionClick to mediumImpact for stronger vibration
-        setState(() {
-          _pressedButton = ""; // Clear pressed state
-        });
+        if (!_socketReady) return;
+
+        HapticFeedback.mediumImpact();
+        print("Button cancelled: $command");
+
+        if (mounted) {
+          setState(() {
+            _pressedButton = "";
+          });
+        }
         _stopSending();
       },
       child: Container(
@@ -100,7 +180,7 @@ class _ControllerPageState extends State<ControllerPage> {
         decoration: BoxDecoration(
           color: isPressed
               ? Colors.white.withValues(alpha: 0.9) // Much lighter when pressed
-              : (color ?? Colors.blue.withValues(alpha: 0.8)), // Default color when not pressed
+              : (color ?? Colors.blue.withValues(alpha: _socketReady ? 0.8 : 0.4)), // Dimmed if not ready
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -115,7 +195,7 @@ class _ControllerPageState extends State<ControllerPage> {
           child: Icon(
             icon,
             size: size * 0.5,
-            color: isPressed ? Colors.grey : Colors.white, // Grey arrows when pressed, white when not
+            color: isPressed ? Colors.grey : (_socketReady ? Colors.white : Colors.grey), // Grey when not ready
           ),
         ),
       ),
@@ -149,6 +229,25 @@ class _ControllerPageState extends State<ControllerPage> {
           ),
         ),
 
+        // Connection status overlay when initializing
+        if (_isInitializing)
+          Container(
+            color: Colors.black.withValues(alpha: 0.7),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 20),
+                  Text(
+                    _connectionStatus,
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
         // Main control area
         Positioned(
           top: screenSize.height * 0.2,
@@ -171,10 +270,10 @@ class _ControllerPageState extends State<ControllerPage> {
                   ),
                   child: Text(
                     _currentCommand.isEmpty
-                        ? "Ready | ${widget.settings.targetIp}:${widget.settings.targetPort}"
+                        ? "${_connectionStatus} | ${widget.settings.targetIp}:${widget.settings.targetPort}"
                         : "Sending: $_currentCommand",
                     style: TextStyle(
-                      color: Colors.white,
+                      color: _socketReady ? Colors.white : Colors.red.shade300,
                       fontSize: 18, // Slightly smaller font
                       fontWeight: FontWeight.bold,
                     ),
@@ -267,3 +366,4 @@ class _ControllerPageState extends State<ControllerPage> {
     );
   }
 }
+
