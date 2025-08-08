@@ -1,6 +1,6 @@
 # UDPCORE
 
-![Alt text](images/banner.png)
+![Alt text](images/feature_graphic.png)
 
 ## Overview
 A powerful and intuitive remote control application that allows you to send UDP commands to control devices over your local network. Perfect for IoT devices, robotics projects, and home automation systems.
