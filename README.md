@@ -16,6 +16,11 @@ The app allows you to configure:
 - **Target Port**: Communication port for your device
 - **Transmission Speed**: Command sending frequency (milliseconds)
 
+## Privacy Policy
+https://www.mehdibahlaoui.pro/udpcore_privacy_policy
+
+## License
+GPL-3.0
 ---
 
 <div align="center">
