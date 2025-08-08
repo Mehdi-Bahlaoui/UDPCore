@@ -21,6 +21,7 @@ https://www.mehdibahlaoui.pro/udpcore_privacy_policy
 
 ## License
 GPL-3.0
+
 ---
 
 <div align="center">
