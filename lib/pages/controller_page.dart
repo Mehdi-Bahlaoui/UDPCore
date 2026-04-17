@@ -3,18 +3,20 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/scheduler.dart';
 import '../models/settings_model.dart';
+import '../services/bluetooth_service.dart';
 
 class ControllerPage extends StatefulWidget {
   final SettingsModel settings;
   final VoidCallback onSettingsTap;
   final VoidCallback onAboutTap;
+  final Function(SettingsModel) onModeChanged;
 
   ControllerPage({
     required this.settings,
     required this.onSettingsTap,
     required this.onAboutTap,
+    required this.onModeChanged,
   });
 
   @override
@@ -22,35 +24,88 @@ class ControllerPage extends StatefulWidget {
 }
 
 class _ControllerPageState extends State<ControllerPage> {
+  // --- UDP ---
   RawDatagramSocket? _socket;
   bool _socketReady = false;
+  String _udpStatus = "Initializing...";
+
+  // --- Bluetooth ---
+  late BluetoothService _bluetoothService;
+  StreamSubscription<BluetoothConnectionStatus>? _btStatusSub;
+  BluetoothConnectionStatus _btStatus = BluetoothConnectionStatus.disconnected;
+
+  // --- Shared ---
   bool _isInitializing = true;
-  String _connectionStatus = "Initializing...";
   Timer? _sendTimer;
   String _currentCommand = "";
-  String _pressedButton = ""; // Track which button is currently pressed
+  String _pressedButton = "";
+
+  bool get _ready =>
+      widget.settings.communicationMode == CommunicationMode.udp
+          ? _socketReady
+          : _bluetoothService.isConnected;
 
   @override
   void initState() {
     super.initState();
-    _initializeSocket();
+    _bluetoothService = BluetoothService();
+    _btStatusSub = _bluetoothService.statusStream.listen((s) {
+      if (mounted) setState(() => _btStatus = s);
+    });
+
+    if (widget.settings.communicationMode == CommunicationMode.udp) {
+      _initializeSocket();
+    } else {
+      setState(() => _isInitializing = false);
+      if (widget.settings.btDeviceAddress != null) {
+        _bluetoothService.connect(widget.settings.btDeviceAddress!);
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ControllerPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldMode = oldWidget.settings.communicationMode;
+    final newMode = widget.settings.communicationMode;
+
+    if (oldMode != newMode) {
+      _sendTimer?.cancel();
+      _pressedButton = "";
+
+      if (newMode == CommunicationMode.udp) {
+        _bluetoothService.disconnect();
+        if (!_socketReady) _initializeSocket();
+      } else {
+        setState(() => _isInitializing = false);
+        if (widget.settings.btDeviceAddress != null) {
+          _bluetoothService.connect(widget.settings.btDeviceAddress!);
+        }
+      }
+    } else if (newMode == CommunicationMode.bluetooth) {
+      // New device selected in BT settings
+      if (oldWidget.settings.btDeviceAddress != widget.settings.btDeviceAddress &&
+          widget.settings.btDeviceAddress != null) {
+        _bluetoothService.connect(widget.settings.btDeviceAddress!);
+      }
+    }
   }
 
   Future<void> _initializeSocket() async {
-    try {
+    if (mounted) {
       setState(() {
-        _connectionStatus = "Connecting...";
+        _udpStatus = "Connecting...";
         _isInitializing = true;
       });
-
+    }
+    try {
       final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
-
       if (mounted) {
         setState(() {
           _socket = socket;
           _socketReady = true;
           _isInitializing = false;
-          _connectionStatus = "Connected";
+          _udpStatus = "Connected";
         });
       }
     } catch (e) {
@@ -58,144 +113,140 @@ class _ControllerPageState extends State<ControllerPage> {
         setState(() {
           _socketReady = false;
           _isInitializing = false;
-          _connectionStatus = "Connection failed: $e";
+          _udpStatus = "Connection failed: $e";
         });
       }
-      // Retry after 3 seconds
-      Timer(Duration(seconds: 3), () {
+      Timer(const Duration(seconds: 3), () {
         if (mounted) _initializeSocket();
       });
     }
   }
 
   void _startSending(String command) {
-    if (!_socketReady || _socket == null) {
-      print("Socket not ready for command: $command");
-      return;
-    }
+    if (!_ready) return;
 
     _sendTimer?.cancel();
-    _sendTimer = Timer.periodic(Duration(milliseconds: widget.settings.speed), (_) {
-      try {
-        final bytesSent = _socket!.send(
-          command.codeUnits,
-          InternetAddress(widget.settings.targetIp),
-          widget.settings.targetPort
-        );
-        print("Sent $bytesSent bytes: $command");
 
-        if (mounted) {
-          setState(() {
-            _currentCommand = command;
-          });
+    if (widget.settings.communicationMode == CommunicationMode.udp) {
+      _sendTimer =
+          Timer.periodic(Duration(milliseconds: widget.settings.speed), (_) {
+        try {
+          _socket!.send(
+            command.codeUnits,
+            InternetAddress(widget.settings.targetIp),
+            widget.settings.targetPort,
+          );
+          if (mounted) setState(() => _currentCommand = command);
+        } catch (e) {
+          if (mounted) setState(() => _udpStatus = "Send error: $e");
         }
-      } catch (e) {
-        print("Error sending command: $e");
-        if (mounted) {
-          setState(() {
-            _connectionStatus = "Send error: $e";
-          });
-        }
-      }
-    });
+      });
+    } else {
+      _sendTimer =
+          Timer.periodic(Duration(milliseconds: widget.settings.speed), (_) {
+        _bluetoothService.sendCommand(command);
+        if (mounted) setState(() => _currentCommand = command);
+      });
+    }
   }
 
   void _stopSending() {
     _sendTimer?.cancel();
     _sendTimer = null;
 
-    if (_socketReady && _socket != null) {
-      try {
-        _socket!.send(
-          widget.settings.stopCommand.codeUnits,
-          InternetAddress(widget.settings.targetIp),
-          widget.settings.targetPort,
-        );
-        print("Sent stop command: ${widget.settings.stopCommand}");
+    final stopCmd = widget.settings.stopCommand;
 
-        if (mounted) {
-          setState(() {
-            _currentCommand = widget.settings.stopCommand;
-            _pressedButton = ""; // Clear pressed state when stopping
-          });
-        }
-      } catch (e) {
-        print("Error sending stop command: $e");
+    if (widget.settings.communicationMode == CommunicationMode.udp) {
+      if (_socketReady && _socket != null) {
+        try {
+          _socket!.send(
+            stopCmd.codeUnits,
+            InternetAddress(widget.settings.targetIp),
+            widget.settings.targetPort,
+          );
+        } catch (_) {}
       }
+    } else {
+      _bluetoothService.sendCommand(stopCmd);
+    }
+
+    if (mounted) {
+      setState(() {
+        _currentCommand = stopCmd;
+        _pressedButton = "";
+      });
     }
   }
 
+  String get _statusLabel {
+    if (_currentCommand.isNotEmpty) return "Sending: $_currentCommand";
+    if (widget.settings.communicationMode == CommunicationMode.udp) {
+      return "$_udpStatus | ${widget.settings.targetIp}:${widget.settings.targetPort}";
+    }
+    final name = widget.settings.btDeviceName ?? 'No device';
+    return "BT: ${_btStatus.name} | $name";
+  }
+
+  Color get _statusColor {
+    if (widget.settings.communicationMode == CommunicationMode.udp) {
+      return _socketReady ? Colors.white : Colors.red.shade300;
+    }
+    return _btStatus == BluetoothConnectionStatus.connected
+        ? Colors.white
+        : Colors.red.shade300;
+  }
+
   Widget _controlButton(
-      IconData icon,
-      String command, {
-        double size = 80,
-        Color? color,
-      }) {
-    bool isPressed = _pressedButton == command;
+    IconData icon,
+    String command, {
+    double size = 80,
+    Color? color,
+  }) {
+    final isPressed = _pressedButton == command;
 
     return Listener(
       onPointerDown: (_) {
-        if (!_socketReady) return; // Don't allow interaction if socket not ready
-
+        if (!_ready) return;
         HapticFeedback.heavyImpact();
-        print("Button pressed: $command");
-
-        if (mounted) {
-          setState(() {
-            _pressedButton = command;
-          });
-        }
+        if (mounted) setState(() => _pressedButton = command);
         _startSending(command);
       },
       onPointerUp: (_) {
-        if (!_socketReady) return;
-
+        if (!_ready) return;
         HapticFeedback.mediumImpact();
-        print("Button released: $command");
-
-        if (mounted) {
-          setState(() {
-            _pressedButton = "";
-          });
-        }
+        if (mounted) setState(() => _pressedButton = "");
         _stopSending();
       },
       onPointerCancel: (_) {
-        if (!_socketReady) return;
-
+        if (!_ready) return;
         HapticFeedback.mediumImpact();
-        print("Button cancelled: $command");
-
-        if (mounted) {
-          setState(() {
-            _pressedButton = "";
-          });
-        }
+        if (mounted) setState(() => _pressedButton = "");
         _stopSending();
       },
       child: Container(
         width: size,
         height: size,
-        margin: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: isPressed
-              ? Colors.white.withValues(alpha: 0.9) // Much lighter when pressed
-              : (color ?? Colors.blue.withValues(alpha: _socketReady ? 0.8 : 0.4)), // Dimmed if not ready
+              ? Colors.white.withValues(alpha: 0.9)
+              : (color ?? Colors.blue.withValues(alpha: _ready ? 0.8 : 0.4)),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 6,
-              offset: Offset(0, 3),
+              offset: const Offset(0, 3),
             ),
           ],
-          border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 2),
+          border:
+              Border.all(color: Colors.white.withValues(alpha: 0.8), width: 2),
         ),
         child: Center(
           child: Icon(
             icon,
             size: size * 0.5,
-            color: isPressed ? Colors.grey : (_socketReady ? Colors.white : Colors.grey), // Grey when not ready
+            color: isPressed ? Colors.grey : (_ready ? Colors.white : Colors.grey),
           ),
         ),
       ),
@@ -206,21 +257,23 @@ class _ControllerPageState extends State<ControllerPage> {
   void dispose() {
     _sendTimer?.cancel();
     _socket?.close();
+    _btStatusSub?.cancel();
+    _bluetoothService.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    final buttonSize = min(screenSize.width * 0.14, screenSize.height * 0.18); // Slightly smaller
+    final buttonSize =
+        min(screenSize.width * 0.14, screenSize.height * 0.18);
 
     return Stack(
       clipBehavior: Clip.none,
-
       children: [
         // Background
         Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             image: DecorationImage(
               image: AssetImage("images/Artboard_1.png"),
               opacity: 0.3,
@@ -229,7 +282,7 @@ class _ControllerPageState extends State<ControllerPage> {
           ),
         ),
 
-        // Connection status overlay when initializing
+        // Initializing overlay (UDP only)
         if (_isInitializing)
           Container(
             color: Colors.black.withValues(alpha: 0.7),
@@ -237,29 +290,51 @@ class _ControllerPageState extends State<ControllerPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(color: Colors.white),
-                  SizedBox(height: 20),
+                  const CircularProgressIndicator(color: Colors.white),
+                  const SizedBox(height: 20),
                   Text(
-                    _connectionStatus,
-                    style: TextStyle(color: Colors.white, fontSize: 18),
+                    _udpStatus,
+                    style:
+                        const TextStyle(color: Colors.white, fontSize: 18),
                   ),
                 ],
               ),
             ),
           ),
 
+        // Mode toggle (top-center)
+        Positioned(
+          top: 16,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: _ModeToggle(
+              isBluetooth: widget.settings.communicationMode ==
+                  CommunicationMode.bluetooth,
+              onToggle: (isBT) {
+                widget.onModeChanged(widget.settings.copyWith(
+                  communicationMode: isBT
+                      ? CommunicationMode.bluetooth
+                      : CommunicationMode.udp,
+                ));
+              },
+            ),
+          ),
+        ),
+
         // Main control area
         Positioned(
           top: screenSize.height * 0.2,
-          left: 12, // Reduced from 20
-          right: 12, // Reduced from 20
+          left: 12,
+          right: 12,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              // Status labels
-              Flexible( // Added Flexible to prevent overflow
+              // Status label
+              Flexible(
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12), // Reduced horizontal padding
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 12),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.6),
                     borderRadius: BorderRadius.circular(20),
@@ -269,22 +344,20 @@ class _ControllerPageState extends State<ControllerPage> {
                     ),
                   ),
                   child: Text(
-                    _currentCommand.isEmpty
-                        ? "${_connectionStatus} | ${widget.settings.targetIp}:${widget.settings.targetPort}"
-                        : "Sending: $_currentCommand",
+                    _statusLabel,
                     style: TextStyle(
-                      color: _socketReady ? Colors.white : Colors.red.shade300,
-                      fontSize: 18, // Slightly smaller font
+                      color: _statusColor,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
-                    overflow: TextOverflow.ellipsis, // Added overflow handling
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
 
-              SizedBox(width: 8), // Added small spacing
+              const SizedBox(width: 8),
 
-              // Directional pad
+              // D-pad
               Column(
                 children: [
                   _controlButton(
@@ -293,7 +366,7 @@ class _ControllerPageState extends State<ControllerPage> {
                     size: buttonSize,
                     color: Colors.black38,
                   ),
-                  SizedBox(height: 4), // Reduced spacing
+                  const SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -303,7 +376,7 @@ class _ControllerPageState extends State<ControllerPage> {
                         size: buttonSize,
                         color: Colors.black38,
                       ),
-                      SizedBox(width: buttonSize * 1.0), // Reduced spacing between buttons
+                      SizedBox(width: buttonSize * 1.0),
                       _controlButton(
                         Icons.arrow_forward,
                         widget.settings.rightCommand,
@@ -312,7 +385,7 @@ class _ControllerPageState extends State<ControllerPage> {
                       ),
                     ],
                   ),
-                  SizedBox(height: 4), // Reduced spacing
+                  const SizedBox(height: 4),
                   _controlButton(
                     Icons.arrow_downward,
                     widget.settings.backwardCommand,
@@ -329,7 +402,7 @@ class _ControllerPageState extends State<ControllerPage> {
         Positioned(
           top: 20,
           left: 20,
-          child: Container(
+          child: SizedBox(
             width: buttonSize * 0.7,
             height: buttonSize * 0.7,
             child: IconButton(
@@ -344,11 +417,11 @@ class _ControllerPageState extends State<ControllerPage> {
           ),
         ),
 
-        // About Us button (top-right)
+        // About button (top-right)
         Positioned(
           top: 20,
           right: 20,
-          child: Container(
+          child: SizedBox(
             width: buttonSize * 0.7,
             height: buttonSize * 0.7,
             child: IconButton(
@@ -367,3 +440,44 @@ class _ControllerPageState extends State<ControllerPage> {
   }
 }
 
+// --- Mode toggle widget ---
+
+class _ModeToggle extends StatelessWidget {
+  final bool isBluetooth;
+  final ValueChanged<bool> onToggle;
+
+  const _ModeToggle({required this.isBluetooth, required this.onToggle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.wifi,
+            size: 18,
+            color: isBluetooth ? Colors.white38 : Colors.white,
+          ),
+          Switch(
+            value: isBluetooth,
+            onChanged: onToggle,
+            activeThumbColor: Colors.lightBlueAccent,
+            inactiveThumbColor: Colors.white,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          Icon(
+            Icons.bluetooth,
+            size: 18,
+            color: isBluetooth ? Colors.lightBlueAccent : Colors.white38,
+          ),
+        ],
+      ),
+    );
+  }
+}

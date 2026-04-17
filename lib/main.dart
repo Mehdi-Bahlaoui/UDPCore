@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'pages/controller_page.dart';
 import 'pages/settings_page.dart';
+import 'pages/bluetooth_settings_page.dart';
 import 'pages/about_page.dart';
 import 'models/settings_model.dart';
 import 'services/storage_service.dart';
@@ -66,8 +67,16 @@ class _MainAppState extends State<MainApp> {
         settings: _settings,
         onSettingsTap: () => setState(() => _selectedPage = 'settings'),
         onAboutTap: () => setState(() => _selectedPage = 'about'),
+        onModeChanged: _updateSettings,
       );
     } else if (_selectedPage == 'settings') {
+      if (_settings.communicationMode == CommunicationMode.bluetooth) {
+        return BluetoothSettingsPage(
+          settings: _settings,
+          onSave: _updateSettings,
+          onBackTap: () => setState(() => _selectedPage = 'controller'),
+        );
+      }
       return SettingsPage(
         settings: _settings,
         onConnect: _updateSettings,
