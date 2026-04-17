@@ -17,7 +17,7 @@ The app allows you to configure:
 - **Transmission Speed**: Command sending frequency (milliseconds)
 
 ## Privacy Policy
-https://www.mehdibahlaoui.pro/udpcore_privacy_policy
+https://mehdibahlaoui.pro/udpcore_privacy_policy
 
 ## License
 GPL-3.0
