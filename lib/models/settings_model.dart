@@ -4,12 +4,14 @@ class SliderConfig {
   final String name;
   final double min;
   final double max;
-  const SliderConfig({this.name = '', this.min = 0, this.max = 180});
-  SliderConfig copyWith({String? name, double? min, double? max}) =>
+  final double defaultValue;
+  const SliderConfig({this.name = '', this.min = 0, this.max = 180, this.defaultValue = 0});
+  SliderConfig copyWith({String? name, double? min, double? max, double? defaultValue}) =>
       SliderConfig(
         name: name ?? this.name,
         min: min ?? this.min,
         max: max ?? this.max,
+        defaultValue: defaultValue ?? this.defaultValue,
       );
 }
 
@@ -48,7 +50,19 @@ class SettingsModel {
     this.holdSliderSend = false,
     this.btStopCommand = 'S',
     this.sendAsBytes = false,
-  }) : sliderConfigs = sliderConfigs ?? List.generate(9, (_) => const SliderConfig());
+  }) : sliderConfigs = sliderConfigs ?? const [
+    SliderConfig(name: 'S1', min: 28.6, max: 141.3, defaultValue: 87.4),
+    SliderConfig(name: 'S2', min: 11.2, max: 180, defaultValue: 90),
+    SliderConfig(name: 'S3', min: 51.9, max: 149.1, defaultValue: 95.2),
+    SliderConfig(name: 'S4', min: 8.6, max: 165.3, defaultValue: 87.4),
+
+    SliderConfig(name: 'S5', min: 0, max: 180, defaultValue: 84.1),
+    SliderConfig(name: 'S6', min: 0, max: 180, defaultValue: 90.7),
+
+    SliderConfig(name: 'S7', min: 0, max: 180, defaultValue: 90),
+    SliderConfig(name: 'S8', min: 0, max: 180, defaultValue: 90),
+    SliderConfig(name: 'S9', min: 0, max: 180, defaultValue: 90),
+  ];
 
   SettingsModel copyWith({
     CommunicationMode? communicationMode,

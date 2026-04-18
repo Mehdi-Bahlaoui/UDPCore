@@ -60,7 +60,7 @@ class _ControllerPageState extends State<ControllerPage> {
     super.initState();
     _sliderValues = List.generate(
       9,
-      (i) => widget.settings.sliderConfigs[i].min,
+      (i) => widget.settings.sliderConfigs[i].defaultValue,
     );
 
     _btStatus = widget.bluetoothService.status;
@@ -183,7 +183,8 @@ class _ControllerPageState extends State<ControllerPage> {
   void _sendBytesPacket() {
     if (!_ready) return;
     widget.bluetoothService.sendRawBytes(_buildSliderPacket());
-    if (mounted) setState(() => _currentCommand = '[packet]');
+    final values = List.generate(9, (i) => _sliderValues[i].round()).join(', ');
+    if (mounted) setState(() => _currentCommand = values);
   }
 
   void _startSendingBytesPacket() {
@@ -283,7 +284,7 @@ class _ControllerPageState extends State<ControllerPage> {
   }
 
   String get _statusLabel {
-    if (_currentCommand.isNotEmpty) return "Sending: $_currentCommand";
+    if (_currentCommand.isNotEmpty) return _currentCommand;
     if (widget.settings.communicationMode == CommunicationMode.udp) {
       return "$_udpStatus | ${widget.settings.targetIp}:${widget.settings.targetPort}";
     }

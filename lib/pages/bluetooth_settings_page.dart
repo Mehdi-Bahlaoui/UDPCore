@@ -44,6 +44,7 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
   late List<TextEditingController> _sliderNameControllers;
   late List<TextEditingController> _sliderMinControllers;
   late List<TextEditingController> _sliderMaxControllers;
+  late List<TextEditingController> _sliderDefaultControllers;
 
   @override
   void initState() {
@@ -73,11 +74,18 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
     );
     _sliderMinControllers = List.generate(
       9,
-      (i) => TextEditingController(text: '0'),
+      (i) => TextEditingController(
+          text: widget.settings.sliderConfigs[i].min.toString()),
     );
     _sliderMaxControllers = List.generate(
       9,
-      (i) => TextEditingController(text: '180'),
+      (i) => TextEditingController(
+          text: widget.settings.sliderConfigs[i].max.toString()),
+    );
+    _sliderDefaultControllers = List.generate(
+      9,
+      (i) => TextEditingController(
+          text: widget.settings.sliderConfigs[i].defaultValue.round().toString()),
     );
 
     _loadBondedDevices();
@@ -100,6 +108,8 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
             widget.settings.sliderConfigs[i].min,
         max: double.tryParse(_sliderMaxControllers[i].text.trim()) ??
             widget.settings.sliderConfigs[i].max,
+        defaultValue: double.tryParse(_sliderDefaultControllers[i].text.trim()) ??
+            widget.settings.sliderConfigs[i].defaultValue,
       ),
     );
     final updated = widget.settings.copyWith(
@@ -120,6 +130,7 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
       _sliderNameControllers[i].dispose();
       _sliderMinControllers[i].dispose();
       _sliderMaxControllers[i].dispose();
+      _sliderDefaultControllers[i].dispose();
     }
 
     super.dispose();
@@ -480,6 +491,7 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
             0: FlexColumnWidth(1.2),
             1: FlexColumnWidth(1),
             2: FlexColumnWidth(1),
+            3: FlexColumnWidth(1),
           },
           children: [
             TableRow(
@@ -490,20 +502,22 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
                 Padding(
                   padding: EdgeInsets.only(right: 4, bottom: 6),
                   child: Text('Name',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 15)),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
                 Padding(
                   padding: EdgeInsets.only(right: 4, bottom: 6),
                   child: Text('Min',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 15)),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 4),
                   child: Text('Max',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 15)),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(left: 4, bottom: 6),
+                  child: Text('Default',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
               ],
             ),
@@ -530,6 +544,15 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                   child: TextField(
                     controller: _sliderMaxControllers[i],
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(isDense: true),
+                    style: const TextStyle(fontSize: 15),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, top: 6),
+                  child: TextField(
+                    controller: _sliderDefaultControllers[i],
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(isDense: true),
                     style: const TextStyle(fontSize: 15),

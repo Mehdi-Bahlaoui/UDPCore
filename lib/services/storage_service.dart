@@ -4,14 +4,6 @@ import '../models/settings_model.dart';
 class StorageService {
   static Future<SettingsModel> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    final sliderConfigs = List.generate(9, (i) {
-      final idx = i + 1;
-      return SliderConfig(
-        name: prefs.getString('bt_s${idx}_name') ?? 'S$idx',
-        min: prefs.getDouble('bt_s${idx}_min') ?? 0.0,
-        max: prefs.getDouble('bt_s${idx}_max') ?? 180.0,
-      );
-    });
     return SettingsModel(
       communicationMode: CommunicationMode.values.firstWhere(
         (e) => e.name == (prefs.getString('communicationMode') ?? 'udp'),
@@ -27,7 +19,7 @@ class StorageService {
       stopCommand: prefs.getString('stopCommand') ?? 'S',
       btDeviceAddress: prefs.getString('btDeviceAddress'),
       btDeviceName: prefs.getString('btDeviceName'),
-      sliderConfigs: sliderConfigs,
+      sliderConfigs: null,
       continuousSend: prefs.getBool('continuousSend') ?? false,
       holdSliderSend: prefs.getBool('holdSliderSend') ?? false,
       btStopCommand: prefs.getString('btStopCommand') ?? 'S',
@@ -56,11 +48,5 @@ class StorageService {
     await prefs.setBool('holdSliderSend', settings.holdSliderSend);
     await prefs.setString('btStopCommand', settings.btStopCommand);
     await prefs.setBool('sendAsBytes', settings.sendAsBytes);
-    for (int i = 0; i < 9; i++) {
-      final idx = i + 1;
-      await prefs.setString('bt_s${idx}_name', settings.sliderConfigs[i].name);
-      await prefs.setDouble('bt_s${idx}_min', settings.sliderConfigs[i].min);
-      await prefs.setDouble('bt_s${idx}_max', settings.sliderConfigs[i].max);
-    }
   }
 }
