@@ -1,5 +1,10 @@
 # UDPCORE
 
+
+## Find APK here:
+build/app/outputs/flutter-apk/app-debug.apk
+
+
 ## Overview
 A powerful and intuitive remote control application that allows you to send UDP commands to control devices over your local network. Perfect for IoT devices, robotics projects, and home automation systems.
 
