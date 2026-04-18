@@ -36,6 +36,7 @@ class _ControllerPageState extends State<ControllerPage> {
   StreamSubscription<String>? _btDataSub;
   late BluetoothConnectionStatus _btStatus;
   String _receivedData = '';
+  String _btBuffer = '';
 
   // --- Shared ---
   bool _isInitializing = true;
@@ -47,6 +48,7 @@ class _ControllerPageState extends State<ControllerPage> {
 
   // --- BT Sliders ---
   late List<double> _sliderValues;
+  final List<bool> _btButtonStates = List.filled(9, false);
 
   bool get _ready =>
       widget.settings.communicationMode == CommunicationMode.udp
@@ -66,7 +68,13 @@ class _ControllerPageState extends State<ControllerPage> {
       if (mounted) setState(() => _btStatus = s);
     });
     _btDataSub = widget.bluetoothService.dataStream.listen((data) {
-      if (mounted) setState(() => _receivedData = data.trim());
+      _btBuffer += data;
+      int newlineIdx;
+      while ((newlineIdx = _btBuffer.indexOf('\n')) >= 0) {
+        final line = _btBuffer.substring(0, newlineIdx).trim();
+        _btBuffer = _btBuffer.substring(newlineIdx + 1);
+        if (mounted && line.isNotEmpty) setState(() => _receivedData = line);
+      }
     });
 
     if (widget.settings.communicationMode == CommunicationMode.udp) {
@@ -147,6 +155,44 @@ class _ControllerPageState extends State<ControllerPage> {
     }
   }
 
+  // Encodes a command as raw bytes when sendAsBytes is enabled and the
+  // command is a parseable integer (0–255). Falls back to codeUnits otherwise.
+  List<int> _encodeCommand(String command) {
+    if (widget.settings.sendAsBytes) {
+      final v = int.tryParse(command.trim());
+      if (v != null && v >= 0 && v <= 255) return [v];
+    }
+    return command.codeUnits;
+  }
+
+  // Builds a 12-byte packet: [0xFF, s0..s8, btn_low, btn_high]
+  List<int> _buildSliderPacket() {
+    final bytes = <int>[0xFF];
+    for (int i = 0; i < 9; i++) {
+      bytes.add(_sliderValues[i].round());
+    }
+    int btnLow = 0;
+    for (int i = 0; i < 8; i++) {
+      if (_btButtonStates[i]) btnLow |= (1 << i);
+    }
+    bytes.add(btnLow);
+    bytes.add(_btButtonStates[8] ? 1 : 0);
+    return bytes;
+  }
+
+  void _sendBytesPacket() {
+    if (!_ready) return;
+    widget.bluetoothService.sendRawBytes(_buildSliderPacket());
+    if (mounted) setState(() => _currentCommand = '[packet]');
+  }
+
+  void _startSendingBytesPacket() {
+    _sendTimer?.cancel();
+    _sendTimer = Timer.periodic(Duration(milliseconds: widget.settings.speed), (_) {
+      _sendBytesPacket();
+    });
+  }
+
   void _startSending(String command) {
     if (!_ready) return;
 
@@ -157,7 +203,7 @@ class _ControllerPageState extends State<ControllerPage> {
           Timer.periodic(Duration(milliseconds: widget.settings.speed), (_) {
         try {
           _socket!.send(
-            command.codeUnits,
+            _encodeCommand(command),
             InternetAddress(widget.settings.targetIp),
             widget.settings.targetPort,
           );
@@ -169,7 +215,7 @@ class _ControllerPageState extends State<ControllerPage> {
     } else {
       _sendTimer =
           Timer.periodic(Duration(milliseconds: widget.settings.speed), (_) {
-        widget.bluetoothService.sendCommand(command);
+        widget.bluetoothService.sendRawBytes(_encodeCommand(command));
         if (mounted) setState(() => _currentCommand = command);
       });
     }
@@ -184,7 +230,7 @@ class _ControllerPageState extends State<ControllerPage> {
       if (_socketReady && _socket != null) {
         try {
           _socket!.send(
-            stopCmd.codeUnits,
+            _encodeCommand(stopCmd),
             InternetAddress(widget.settings.targetIp),
             widget.settings.targetPort,
           );
@@ -194,7 +240,7 @@ class _ControllerPageState extends State<ControllerPage> {
     } else {
       final stopCmd = widget.settings.btStopCommand;
       if (stopCmd.isNotEmpty) {
-        widget.bluetoothService.sendCommand(stopCmd);
+        widget.bluetoothService.sendRawBytes(_encodeCommand(stopCmd));
       }
       if (mounted) setState(() { _currentCommand = stopCmd; _pressedButton = ""; });
     }
@@ -208,13 +254,17 @@ class _ControllerPageState extends State<ControllerPage> {
         Duration(milliseconds: widget.settings.speed),
         (_) {
           if (!_ready) return;
-          final parts = List.generate(9, (i) {
-            final name = widget.settings.sliderConfigs[i].name;
-            return '$name:${_sliderValues[i].round()}';
-          });
-          final cmd = parts.join(',');
-          widget.bluetoothService.sendCommand(cmd);
-          if (mounted) setState(() => _currentCommand = cmd);
+          if (widget.settings.sendAsBytes) {
+            _sendBytesPacket();
+          } else {
+            final parts = List.generate(9, (i) {
+              final name = widget.settings.sliderConfigs[i].name;
+              return '$name:${_sliderValues[i].round()}';
+            });
+            final cmd = parts.join(',');
+            widget.bluetoothService.sendCommand(cmd);
+            if (mounted) setState(() => _currentCommand = cmd);
+          }
         },
       );
     }
@@ -222,10 +272,14 @@ class _ControllerPageState extends State<ControllerPage> {
 
   void _sendSliderValue(int index, double value) {
     if (!_ready) return;
-    final name = widget.settings.sliderConfigs[index].name;
-    final cmd = '$name:${value.round()}';
-    widget.bluetoothService.sendCommand(cmd);
-    if (mounted) setState(() => _currentCommand = cmd);
+    if (widget.settings.sendAsBytes) {
+      _sendBytesPacket();
+    } else {
+      final name = widget.settings.sliderConfigs[index].name;
+      final cmd = '$name:${value.round()}';
+      widget.bluetoothService.sendCommand(cmd);
+      if (mounted) setState(() => _currentCommand = cmd);
+    }
   }
 
   String get _statusLabel {
@@ -307,7 +361,7 @@ class _ControllerPageState extends State<ControllerPage> {
   Widget _buildSliderColumn(int index, {Color activeColor = Colors.blueAccent}) {
     final cfg = widget.settings.sliderConfigs[index];
     final isPressed = _pressedButton == 'btn_$index';
-    final btnCmd = cfg.buttonCommand;
+    final btnLabel = 'B$index';
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -361,25 +415,44 @@ class _ControllerPageState extends State<ControllerPage> {
         // Hold button
         Listener(
           onPointerDown: (_) {
-            if (!_ready || btnCmd.isEmpty) return;
+            if (!_ready) return;
             HapticFeedback.heavyImpact();
-            if (mounted) setState(() => _pressedButton = 'btn_$index');
-            _startSending(btnCmd);
+            if (widget.settings.sendAsBytes) {
+              if (mounted) setState(() { _pressedButton = 'btn_$index'; _btButtonStates[index] = true; });
+              _startSendingBytesPacket();
+            } else {
+              if (mounted) setState(() => _pressedButton = 'btn_$index');
+              _startSending(btnLabel);
+            }
           },
           onPointerUp: (_) {
             if (!_ready) return;
             HapticFeedback.mediumImpact();
-            if (mounted) setState(() => _pressedButton = "");
-            _stopSending();
+            if (widget.settings.sendAsBytes) {
+              _sendTimer?.cancel();
+              _sendTimer = null;
+              if (mounted) setState(() { _pressedButton = ''; _btButtonStates[index] = false; });
+              _sendBytesPacket();
+            } else {
+              if (mounted) setState(() => _pressedButton = "");
+              _stopSending();
+            }
           },
           onPointerCancel: (_) {
             if (!_ready) return;
-            if (mounted) setState(() => _pressedButton = "");
-            _stopSending();
+            if (widget.settings.sendAsBytes) {
+              _sendTimer?.cancel();
+              _sendTimer = null;
+              if (mounted) setState(() { _pressedButton = ''; _btButtonStates[index] = false; });
+              _sendBytesPacket();
+            } else {
+              if (mounted) setState(() => _pressedButton = "");
+              _stopSending();
+            }
           },
           child: Container(
-            width: 36,
-            height: 28,
+            width: 56,
+            height: 48,
             decoration: BoxDecoration(
               color: isPressed
                   ? Colors.white.withValues(alpha: 0.9)
@@ -388,16 +461,7 @@ class _ControllerPageState extends State<ControllerPage> {
               border: Border.all(
                   color: Colors.white.withValues(alpha: 0.6), width: 1),
             ),
-            child: Center(
-              child: Text(
-                btnCmd.isNotEmpty ? btnCmd : 'B${index + 1}',
-                style: TextStyle(
-                  color: isPressed ? Colors.black87 : Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+            child: const SizedBox.shrink(),
           ),
         ),
       ],

@@ -9,8 +9,7 @@ class StorageService {
       return SliderConfig(
         name: prefs.getString('bt_s${idx}_name') ?? 'S$idx',
         min: prefs.getDouble('bt_s${idx}_min') ?? 0.0,
-        max: prefs.getDouble('bt_s${idx}_max') ?? 100.0,
-        buttonCommand: prefs.getString('bt_s${idx}_btn') ?? 'B$idx',
+        max: prefs.getDouble('bt_s${idx}_max') ?? 180.0,
       );
     });
     return SettingsModel(
@@ -32,6 +31,7 @@ class StorageService {
       continuousSend: prefs.getBool('continuousSend') ?? false,
       holdSliderSend: prefs.getBool('holdSliderSend') ?? false,
       btStopCommand: prefs.getString('btStopCommand') ?? 'S',
+      sendAsBytes: prefs.getBool('sendAsBytes') ?? false,
     );
   }
 
@@ -55,12 +55,12 @@ class StorageService {
     await prefs.setBool('continuousSend', settings.continuousSend);
     await prefs.setBool('holdSliderSend', settings.holdSliderSend);
     await prefs.setString('btStopCommand', settings.btStopCommand);
+    await prefs.setBool('sendAsBytes', settings.sendAsBytes);
     for (int i = 0; i < 9; i++) {
       final idx = i + 1;
       await prefs.setString('bt_s${idx}_name', settings.sliderConfigs[i].name);
       await prefs.setDouble('bt_s${idx}_min', settings.sliderConfigs[i].min);
       await prefs.setDouble('bt_s${idx}_max', settings.sliderConfigs[i].max);
-      await prefs.setString('bt_s${idx}_btn', settings.sliderConfigs[i].buttonCommand);
     }
   }
 }

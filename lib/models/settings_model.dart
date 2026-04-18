@@ -4,14 +4,12 @@ class SliderConfig {
   final String name;
   final double min;
   final double max;
-  final String buttonCommand;
-  const SliderConfig({this.name = '', this.min = 0, this.max = 100, this.buttonCommand = ''});
-  SliderConfig copyWith({String? name, double? min, double? max, String? buttonCommand}) =>
+  const SliderConfig({this.name = '', this.min = 0, this.max = 180});
+  SliderConfig copyWith({String? name, double? min, double? max}) =>
       SliderConfig(
         name: name ?? this.name,
         min: min ?? this.min,
         max: max ?? this.max,
-        buttonCommand: buttonCommand ?? this.buttonCommand,
       );
 }
 
@@ -31,6 +29,7 @@ class SettingsModel {
   final bool continuousSend;
   final bool holdSliderSend;
   final String btStopCommand;
+  final bool sendAsBytes;
 
   SettingsModel({
     this.communicationMode = CommunicationMode.udp,
@@ -48,6 +47,7 @@ class SettingsModel {
     this.continuousSend = false,
     this.holdSliderSend = false,
     this.btStopCommand = 'S',
+    this.sendAsBytes = false,
   }) : sliderConfigs = sliderConfigs ?? List.generate(9, (_) => const SliderConfig());
 
   SettingsModel copyWith({
@@ -66,6 +66,7 @@ class SettingsModel {
     bool? continuousSend,
     bool? holdSliderSend,
     String? btStopCommand,
+    bool? sendAsBytes,
   }) {
     return SettingsModel(
       communicationMode: communicationMode ?? this.communicationMode,
@@ -83,6 +84,7 @@ class SettingsModel {
       continuousSend: continuousSend ?? this.continuousSend,
       holdSliderSend: holdSliderSend ?? this.holdSliderSend,
       btStopCommand: btStopCommand ?? this.btStopCommand,
+      sendAsBytes: sendAsBytes ?? this.sendAsBytes,
     );
   }
 }

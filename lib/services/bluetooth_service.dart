@@ -78,6 +78,16 @@ class BluetoothService {
     }
   }
 
+  void sendRawBytes(List<int> bytes) {
+    if (!isConnected) return;
+    try {
+      _connection!.output.add(Uint8List.fromList(bytes));
+    } catch (_) {
+      _connection = null;
+      _emit(BluetoothConnectionStatus.error);
+    }
+  }
+
   // --- Discovery helpers (used by BluetoothSettingsPage) ---
 
   Future<List<BluetoothDevice>> getBondedDevices() async {

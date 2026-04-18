@@ -40,10 +40,10 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
   late TextEditingController _btStopController;
   bool _continuousSend = false;
   bool _holdSliderSend = false;
+  bool _sendAsBytes = false;
   late List<TextEditingController> _sliderNameControllers;
   late List<TextEditingController> _sliderMinControllers;
   late List<TextEditingController> _sliderMaxControllers;
-  late List<TextEditingController> _sliderBtnControllers;
 
   @override
   void initState() {
@@ -62,6 +62,7 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
         TextEditingController(text: widget.settings.btStopCommand);
     _continuousSend = widget.settings.continuousSend;
     _holdSliderSend = widget.settings.holdSliderSend;
+    _sendAsBytes = widget.settings.sendAsBytes;
 
     _sliderNameControllers = List.generate(
       9,
@@ -72,20 +73,11 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
     );
     _sliderMinControllers = List.generate(
       9,
-      (i) => TextEditingController(
-          text: widget.settings.sliderConfigs[i].min.round().toString()),
+      (i) => TextEditingController(text: '0'),
     );
     _sliderMaxControllers = List.generate(
       9,
-      (i) => TextEditingController(
-          text: widget.settings.sliderConfigs[i].max.round().toString()),
-    );
-    _sliderBtnControllers = List.generate(
-      9,
-      (i) {
-        final cmd = widget.settings.sliderConfigs[i].buttonCommand;
-        return TextEditingController(text: cmd.isNotEmpty ? cmd : 'B${i + 1}');
-      },
+      (i) => TextEditingController(text: '180'),
     );
 
     _loadBondedDevices();
@@ -108,7 +100,6 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
             widget.settings.sliderConfigs[i].min,
         max: double.tryParse(_sliderMaxControllers[i].text.trim()) ??
             widget.settings.sliderConfigs[i].max,
-        buttonCommand: _sliderBtnControllers[i].text.trim(),
       ),
     );
     final updated = widget.settings.copyWith(
@@ -119,6 +110,7 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
       continuousSend: _continuousSend,
       holdSliderSend: _holdSliderSend,
       btStopCommand: _btStopController.text.trim(),
+      sendAsBytes: _sendAsBytes,
     );
     widget.onSave(updated);
 
@@ -128,7 +120,6 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
       _sliderNameControllers[i].dispose();
       _sliderMinControllers[i].dispose();
       _sliderMaxControllers[i].dispose();
-      _sliderBtnControllers[i].dispose();
     }
 
     super.dispose();
@@ -472,6 +463,12 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
               },
             ),
             const Text('Hold-to-send per slider', style: TextStyle(fontSize: 15)),
+            const SizedBox(width: 16),
+            Checkbox(
+              value: _sendAsBytes,
+              onChanged: (v) => setState(() { _sendAsBytes = v ?? false; }),
+            ),
+            const Text('Send as bytes', style: TextStyle(fontSize: 15)),
           ],
         ),
         const SizedBox(height: 8),
@@ -483,7 +480,6 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
             0: FlexColumnWidth(1.2),
             1: FlexColumnWidth(1),
             2: FlexColumnWidth(1),
-            3: FlexColumnWidth(1),
           },
           children: [
             TableRow(
@@ -506,12 +502,6 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 4),
                   child: Text('Max',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 15)),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(left: 4, bottom: 6),
-                  child: Text('Button',
                       style: TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
@@ -541,14 +531,6 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
                   child: TextField(
                     controller: _sliderMaxControllers[i],
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(isDense: true),
-                    style: const TextStyle(fontSize: 15),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 4, top: 6),
-                  child: TextField(
-                    controller: _sliderBtnControllers[i],
                     decoration: const InputDecoration(isDense: true),
                     style: const TextStyle(fontSize: 15),
                   ),
