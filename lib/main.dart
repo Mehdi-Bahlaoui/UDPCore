@@ -6,6 +6,7 @@ import 'pages/bluetooth_settings_page.dart';
 import 'pages/about_page.dart';
 import 'models/settings_model.dart';
 import 'services/storage_service.dart';
+import 'services/bluetooth_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +31,7 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   String _selectedPage = 'controller';
+  late BluetoothService _btService;
   SettingsModel _settings = SettingsModel(
     targetIp: '172.22.25.169',
     targetPort: 4210,
@@ -44,7 +46,14 @@ class _MainAppState extends State<MainApp> {
   @override
   void initState() {
     super.initState();
+    _btService = BluetoothService();
     _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    _btService.dispose();
+    super.dispose();
   }
 
   Future<void> _loadSettings() async {
@@ -65,6 +74,7 @@ class _MainAppState extends State<MainApp> {
     if (_selectedPage == 'controller') {
       return ControllerPage(
         settings: _settings,
+        bluetoothService: _btService,
         onSettingsTap: () => setState(() => _selectedPage = 'settings'),
         onAboutTap: () => setState(() => _selectedPage = 'about'),
         onModeChanged: _updateSettings,
@@ -73,6 +83,7 @@ class _MainAppState extends State<MainApp> {
       if (_settings.communicationMode == CommunicationMode.bluetooth) {
         return BluetoothSettingsPage(
           settings: _settings,
+          bluetoothService: _btService,
           onSave: _updateSettings,
           onBackTap: () => setState(() => _selectedPage = 'controller'),
         );

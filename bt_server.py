@@ -4,7 +4,7 @@ UDPCore BT Server — all-in-one Bluetooth SPP receiver
 Usage: sudo python3 bt_server.py
 """
 
-import os, sys, time, signal, threading, subprocess
+import os, sys, time, signal, threading, subprocess, errno
 import bluetooth
 
 CHANNEL    = 1
@@ -137,7 +137,35 @@ def serve(addr):
             time.sleep(1)
             continue
 
-        ok(f"Connected: {client_addr[0]}\n")
+        ok(f"Connected: {client_addr[0]}")
+        info("Type a message and press Enter to send it to the app.\n")
+
+        stop_event = threading.Event()
+
+        def _sender():
+            while not stop_event.is_set():
+                try:
+                    line = sys.stdin.readline()
+                except Exception as e:
+                    warn(f"stdin read error: {e}")
+                    break
+                if not line:  # true EOF
+                    break
+                if stop_event.is_set():
+                    break
+                line = line.rstrip('\n')
+                if not line:  # empty Enter — skip, keep thread alive
+                    continue
+                try:
+                    os.write(client_sock.fileno(), (line + '\n').encode('utf-8'))
+                    print(f"  \033[35mSENT\033[0m ◀  {line}", flush=True)
+                except OSError as e:
+                    warn(f"Send error: {e}")
+                    break
+
+        sender_thread = threading.Thread(target=_sender, daemon=True)
+        sender_thread.start()
+
         try:
             while True:
                 data = client_sock.recv(1024)
@@ -149,6 +177,7 @@ def serve(addr):
         except (bluetooth.BluetoothError, OSError):
             pass
         finally:
+            stop_event.set()
             client_sock.close()
             print()
             info("Disconnected — waiting for next connection...\n")

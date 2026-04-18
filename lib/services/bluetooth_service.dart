@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 
@@ -7,9 +8,11 @@ enum BluetoothConnectionStatus { disconnected, connecting, connected, error }
 class BluetoothService {
   final _statusController =
       StreamController<BluetoothConnectionStatus>.broadcast();
+  final _dataController = StreamController<String>.broadcast();
 
   Stream<BluetoothConnectionStatus> get statusStream =>
       _statusController.stream;
+  Stream<String> get dataStream => _dataController.stream;
 
   BluetoothConnectionStatus _status = BluetoothConnectionStatus.disconnected;
   BluetoothConnectionStatus get status => _status;
@@ -33,9 +36,13 @@ class BluetoothService {
       _connection = await BluetoothConnection.toAddress(address);
       _emit(BluetoothConnectionStatus.connected);
 
-      // Watch for remote-side disconnect
+      // Watch for incoming data and disconnect
       _connection!.input!.listen(
-        null,
+        (data) {
+          if (!_dataController.isClosed) {
+            _dataController.add(utf8.decode(data, allowMalformed: true));
+          }
+        },
         onDone: () {
           _connection = null;
           _emit(BluetoothConnectionStatus.disconnected);
@@ -99,5 +106,6 @@ class BluetoothService {
   void dispose() {
     _connection?.close();
     _statusController.close();
+    _dataController.close();
   }
 }

@@ -7,11 +7,13 @@ import '../services/bluetooth_service.dart';
 
 class BluetoothSettingsPage extends StatefulWidget {
   final SettingsModel settings;
+  final BluetoothService bluetoothService;
   final Function(SettingsModel) onSave;
   final VoidCallback onBackTap;
 
   const BluetoothSettingsPage({
     required this.settings,
+    required this.bluetoothService,
     required this.onSave,
     required this.onBackTap,
   });
@@ -21,9 +23,9 @@ class BluetoothSettingsPage extends StatefulWidget {
 }
 
 class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
-  late BluetoothService _service;
+  bool _disposed = false;
   StreamSubscription<BluetoothConnectionStatus>? _statusSub;
-  BluetoothConnectionStatus _btStatus = BluetoothConnectionStatus.disconnected;
+  late BluetoothConnectionStatus _btStatus;
 
   List<BluetoothDevice> _bondedDevices = [];
   List<BluetoothDiscoveryResult> _discoveredDevices = [];
@@ -31,24 +33,24 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
   bool _isScanning = false;
   bool _isLoadingBonded = false;
 
-  // Currently selected device (persisted address from settings or chosen during this session)
   String? _selectedAddress;
   String? _selectedName;
 
-  // Config controllers
   late TextEditingController _speedController;
-  late TextEditingController _forwardController;
-  late TextEditingController _leftController;
-  late TextEditingController _backwardController;
-  late TextEditingController _rightController;
-  late TextEditingController _stopController;
+  late TextEditingController _btStopController;
+  bool _continuousSend = false;
+  bool _holdSliderSend = false;
+  late List<TextEditingController> _sliderNameControllers;
+  late List<TextEditingController> _sliderMinControllers;
+  late List<TextEditingController> _sliderMaxControllers;
+  late List<TextEditingController> _sliderBtnControllers;
 
   @override
   void initState() {
     super.initState();
-    _service = BluetoothService();
-    _statusSub = _service.statusStream.listen((s) {
-      if (mounted) setState(() => _btStatus = s);
+    _btStatus = widget.bluetoothService.status;
+    _statusSub = widget.bluetoothService.statusStream.listen((s) {
+      if (!_disposed && mounted) setState(() => _btStatus = s);
     });
 
     _selectedAddress = widget.settings.btDeviceAddress;
@@ -56,56 +58,78 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
 
     _speedController =
         TextEditingController(text: widget.settings.speed.toString());
-    _forwardController =
-        TextEditingController(text: widget.settings.forwardCommand);
-    _leftController =
-        TextEditingController(text: widget.settings.leftCommand);
-    _backwardController =
-        TextEditingController(text: widget.settings.backwardCommand);
-    _rightController =
-        TextEditingController(text: widget.settings.rightCommand);
-    _stopController =
-        TextEditingController(text: widget.settings.stopCommand);
+    _btStopController =
+        TextEditingController(text: widget.settings.btStopCommand);
+    _continuousSend = widget.settings.continuousSend;
+    _holdSliderSend = widget.settings.holdSliderSend;
+
+    _sliderNameControllers = List.generate(
+      9,
+      (i) {
+        final name = widget.settings.sliderConfigs[i].name;
+        return TextEditingController(text: name.isNotEmpty ? name : 'S${i + 1}');
+      },
+    );
+    _sliderMinControllers = List.generate(
+      9,
+      (i) => TextEditingController(
+          text: widget.settings.sliderConfigs[i].min.round().toString()),
+    );
+    _sliderMaxControllers = List.generate(
+      9,
+      (i) => TextEditingController(
+          text: widget.settings.sliderConfigs[i].max.round().toString()),
+    );
+    _sliderBtnControllers = List.generate(
+      9,
+      (i) {
+        final cmd = widget.settings.sliderConfigs[i].buttonCommand;
+        return TextEditingController(text: cmd.isNotEmpty ? cmd : 'B${i + 1}');
+      },
+    );
 
     _loadBondedDevices();
   }
 
   @override
   void dispose() {
+    _disposed = true;
     _discoverySub?.cancel();
     _statusSub?.cancel();
-    _service.disconnect();
-    _service.dispose();
 
     // Persist config on leave
+    final updatedSliderConfigs = List.generate(
+      9,
+      (i) => SliderConfig(
+        name: _sliderNameControllers[i].text.trim().isNotEmpty
+            ? _sliderNameControllers[i].text.trim()
+            : 'S${i + 1}',
+        min: double.tryParse(_sliderMinControllers[i].text.trim()) ??
+            widget.settings.sliderConfigs[i].min,
+        max: double.tryParse(_sliderMaxControllers[i].text.trim()) ??
+            widget.settings.sliderConfigs[i].max,
+        buttonCommand: _sliderBtnControllers[i].text.trim(),
+      ),
+    );
     final updated = widget.settings.copyWith(
       speed: int.tryParse(_speedController.text.trim()) ?? widget.settings.speed,
-      forwardCommand: _forwardController.text.trim().isNotEmpty
-          ? _forwardController.text.trim()
-          : widget.settings.forwardCommand,
-      leftCommand: _leftController.text.trim().isNotEmpty
-          ? _leftController.text.trim()
-          : widget.settings.leftCommand,
-      backwardCommand: _backwardController.text.trim().isNotEmpty
-          ? _backwardController.text.trim()
-          : widget.settings.backwardCommand,
-      rightCommand: _rightController.text.trim().isNotEmpty
-          ? _rightController.text.trim()
-          : widget.settings.rightCommand,
-      stopCommand: _stopController.text.trim().isNotEmpty
-          ? _stopController.text.trim()
-          : widget.settings.stopCommand,
       btDeviceAddress: _selectedAddress,
       btDeviceName: _selectedName,
+      sliderConfigs: updatedSliderConfigs,
+      continuousSend: _continuousSend,
+      holdSliderSend: _holdSliderSend,
+      btStopCommand: _btStopController.text.trim(),
     );
     widget.onSave(updated);
 
     _speedController.dispose();
-    _forwardController.dispose();
-    _leftController.dispose();
-    _backwardController.dispose();
-    _rightController.dispose();
-    _stopController.dispose();
+    _btStopController.dispose();
+    for (int i = 0; i < 9; i++) {
+      _sliderNameControllers[i].dispose();
+      _sliderMinControllers[i].dispose();
+      _sliderMaxControllers[i].dispose();
+      _sliderBtnControllers[i].dispose();
+    }
 
     super.dispose();
   }
@@ -113,7 +137,7 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
   Future<void> _loadBondedDevices() async {
     setState(() => _isLoadingBonded = true);
     try {
-      final devices = await _service.getBondedDevices();
+      final devices = await widget.bluetoothService.getBondedDevices();
       if (mounted) setState(() => _bondedDevices = devices);
     } catch (_) {}
     if (mounted) setState(() => _isLoadingBonded = false);
@@ -146,11 +170,10 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
       _discoveredDevices.clear();
     });
     _discoverySub?.cancel();
-    _discoverySub = _service.startDiscovery().listen(
+    _discoverySub = widget.bluetoothService.startDiscovery().listen(
       (result) {
         if (mounted) {
           setState(() {
-            // Avoid duplicates
             _discoveredDevices.removeWhere(
                 (r) => r.device.address == result.device.address);
             _discoveredDevices.add(result);
@@ -167,7 +190,7 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
   }
 
   Future<void> _stopScan() async {
-    await _service.cancelDiscovery();
+    await widget.bluetoothService.cancelDiscovery();
     _discoverySub?.cancel();
     if (mounted) setState(() => _isScanning = false);
   }
@@ -176,12 +199,13 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
     final granted = await _requestPermissions();
     if (!granted) return;
     try {
-      final bonded = await _service.bondDevice(device.address);
+      final bonded = await widget.bluetoothService.bondDevice(device.address);
       if (bonded == true) {
         await _loadBondedDevices();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Paired with ${device.name ?? device.address}')),
+            SnackBar(
+                content: Text('Paired with ${device.name ?? device.address}')),
           );
         }
       }
@@ -189,8 +213,8 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
   }
 
   Future<void> _connectDevice(BluetoothDevice device) async {
-    await _service.connect(device.address);
-    if (_service.isConnected) {
+    await widget.bluetoothService.connect(device.address);
+    if (widget.bluetoothService.isConnected) {
       setState(() {
         _selectedAddress = device.address;
         _selectedName = device.name ?? device.address;
@@ -199,7 +223,7 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
   }
 
   Future<void> _disconnectDevice() async {
-    await _service.disconnect();
+    await widget.bluetoothService.disconnect();
   }
 
   Color get _statusColor {
@@ -345,7 +369,8 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
         else if (_bondedDevices.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 6),
-            child: Text('No bonded devices', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            child: Text('No bonded devices',
+                style: TextStyle(color: Colors.grey, fontSize: 12)),
           )
         else
           ...(_bondedDevices
@@ -375,7 +400,8 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
                             padding: EdgeInsets.zero,
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                        child: const Text('Stop', style: TextStyle(fontSize: 12)),
+                        child:
+                            const Text('Stop', style: TextStyle(fontSize: 12)),
                       ),
                     ],
                   )
@@ -414,66 +440,120 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
         TextField(
           controller: _speedController,
           keyboardType: TextInputType.number,
-          decoration:
-              const InputDecoration(labelText: 'Send Interval (ms)', isDense: true),
+          style: const TextStyle(fontSize: 15),
+          decoration: const InputDecoration(
+              labelText: 'Send Interval (ms)',
+              labelStyle: TextStyle(fontSize: 15),
+              isDense: true),
         ),
-        const SizedBox(height: 16),
-        const Text('Commands',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _btStopController,
+          style: const TextStyle(fontSize: 15),
+          decoration: const InputDecoration(
+              labelText: 'Button Release Command (empty = none)',
+              labelStyle: TextStyle(fontSize: 15),
+              isDense: true),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Checkbox(
+              value: _continuousSend,
+              onChanged: (v) => setState(() { _continuousSend = v ?? false; }),
+            ),
+            const Text('Send all continuously', style: TextStyle(fontSize: 15)),
+            const SizedBox(width: 16),
+            Checkbox(
+              value: _holdSliderSend,
+              onChanged: (v) {
+                if (_continuousSend) return;
+                setState(() { _holdSliderSend = v ?? false; });
+              },
+            ),
+            const Text('Hold-to-send per slider', style: TextStyle(fontSize: 15)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const Text('Slider Config',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         Table(
           columnWidths: const {
-            0: FlexColumnWidth(1),
+            0: FlexColumnWidth(1.2),
             1: FlexColumnWidth(1),
+            2: FlexColumnWidth(1),
+            3: FlexColumnWidth(1),
           },
           children: [
-            TableRow(children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8, bottom: 8),
-                child: TextField(
-                  controller: _forwardController,
-                  decoration: const InputDecoration(
-                      labelText: 'Forward', isDense: true),
-                ),
+            TableRow(
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: Colors.grey)),
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 8, bottom: 8),
-                child: TextField(
-                  controller: _leftController,
-                  decoration:
-                      const InputDecoration(labelText: 'Left', isDense: true),
+              children: const [
+                Padding(
+                  padding: EdgeInsets.only(right: 4, bottom: 6),
+                  child: Text('Name',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
-              ),
-            ]),
-            TableRow(children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8, bottom: 8),
-                child: TextField(
-                  controller: _backwardController,
-                  decoration: const InputDecoration(
-                      labelText: 'Backward', isDense: true),
+                Padding(
+                  padding: EdgeInsets.only(right: 4, bottom: 6),
+                  child: Text('Min',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 8, bottom: 8),
-                child: TextField(
-                  controller: _rightController,
-                  decoration:
-                      const InputDecoration(labelText: 'Right', isDense: true),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  child: Text('Max',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
-              ),
-            ]),
-            TableRow(children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8, bottom: 8),
-                child: TextField(
-                  controller: _stopController,
-                  decoration:
-                      const InputDecoration(labelText: 'Stop', isDense: true),
+                Padding(
+                  padding: EdgeInsets.only(left: 4, bottom: 6),
+                  child: Text('Button',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
-              ),
-              const SizedBox(),
-            ]),
+              ],
+            ),
+            for (int i = 0; i < 9; i++)
+              TableRow(children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 4, top: 6),
+                  child: TextField(
+                    controller: _sliderNameControllers[i],
+                    decoration: const InputDecoration(isDense: true),
+                    style: const TextStyle(fontSize: 15),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 4, top: 6),
+                  child: TextField(
+                    controller: _sliderMinControllers[i],
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(isDense: true),
+                    style: const TextStyle(fontSize: 15),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  child: TextField(
+                    controller: _sliderMaxControllers[i],
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(isDense: true),
+                    style: const TextStyle(fontSize: 15),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, top: 6),
+                  child: TextField(
+                    controller: _sliderBtnControllers[i],
+                    decoration: const InputDecoration(isDense: true),
+                    style: const TextStyle(fontSize: 15),
+                  ),
+                ),
+              ]),
           ],
         ),
       ],
@@ -491,24 +571,14 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
           tooltip: 'Back to Controller',
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Left: device management
-            Expanded(
-              child: SingleChildScrollView(
-                child: _buildDevicePanel(),
-              ),
-            ),
-            const VerticalDivider(width: 24),
-            // Right: configuration
-            Expanded(
-              child: SingleChildScrollView(
-                child: _buildConfigPanel(),
-              ),
-            ),
+            _buildConfigPanel(),
+            const Divider(height: 32),
+            _buildDevicePanel(),
           ],
         ),
       ),
