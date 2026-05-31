@@ -1,9 +1,24 @@
 # UDPCORE
+
+<table>
+  <tr>
+    <td>
+      <img width="145" height="145" alt="Image" src="https://github.com/user-attachments/assets/a7b79d96-eb94-434e-95d5-5b70b53da04a" />
+    </td>
+    <td style="vertical-align:middle; border-left:2px solid #ccc; padding-left:20px;">
+      <p>
+        A powerful and intuitive remote control application that allows you to send UDP or Bluetooth Classic commands to control devices over your local network.<br>
+        Perfect for IoT devices, robotics projects, and home automation systems.
+      </p>
+    </td>
+  </tr>
+</table>
+
+---
+
 <img width="1544" height="720" alt="Image" src="https://github.com/user-attachments/assets/730a5587-a0ed-4194-b4d0-98bf91de4614" />
 
-## Overview
-A powerful and intuitive remote control application that allows you to send UDP or Bluetooth Classic commands to control devices over your local network.
-Perfect for IoT devices, robotics projects, and home automation systems.
+
 
 ## Features
 - **Real-time Control**: Instant command transmission with visual feedback
