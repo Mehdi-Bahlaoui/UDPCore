@@ -56,3 +56,13 @@ app.*.map.json
 
 TODO.md
 CLAUDE.md
+
+# Local release notes and signing secrets
+/RELEASE_PLAN.md
+/MANUAL_RELEASE.md
+**/key.properties
+**/*.jks
+**/*.keystore
+.env
+.env.*
+!.env.example
