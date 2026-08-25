@@ -82,7 +82,7 @@ UDPCore is dedicated to the Roboticore Club of ENSAM Rabat, Morocco.
 - **Tags:** suggested — *Utilities*, *Developer tools*
 - **Contact email:** mehdibahlaoui3@gmail.com
 - **Website (optional):** https://github.com/Mehdi-Bahlaoui/UDPCore
-- **Privacy policy URL:** https://mehdi-bahlaoui.github.io/UDPCore/privacy-policy.html
+- **Privacy policy URL:** https://mehdibahlaoui.com/udpcore_privacy_policy.html
 
 ---
 

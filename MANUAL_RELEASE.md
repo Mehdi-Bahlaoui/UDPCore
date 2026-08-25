@@ -2,19 +2,7 @@
 
 Local work is complete. **Use the existing Play Console app. Do not delete it or create a replacement.**
 
-## 1. Enable the privacy-policy page
-
-In GitHub, open **UDPCore → Settings → Pages** and choose:
-
-- Source: **Deploy from a branch**
-- Branch: **master**
-- Folder: **/docs**
-
-Save, then confirm this URL loads in a private window:
-
-<https://mehdi-bahlaoui.github.io/UDPCore/privacy-policy.html>
-
-## 2. Finish the Play Console listing
+## 1. Finish the Play Console listing
 
 Open the existing **UDPCore** app and update its Main store listing:
 
@@ -23,9 +11,9 @@ Open the existing **UDPCore** app and update its Main store listing:
 - Feature graphic: `store/feature-graphic-1024x500.png`
 - Screenshots: `store/screenshots/`
 - Category: **Tools**
-- Privacy policy: the URL above
+- Privacy policy: <https://mehdibahlaoui.com/udpcore_privacy_policy.html>
 
-## 3. Complete App content
+## 2. Complete App content
 
 | Declaration | Answer |
 |---|---|
@@ -42,7 +30,7 @@ App access note:
 
 > Requires an ESP32/Arduino on the same Wi-Fi network, or a paired Bluetooth serial device, to send commands. The UI is fully browsable without hardware.
 
-## 4. Start the closed test
+## 3. Start the closed test
 
 In **Test and release → Testing → Closed testing**:
 
@@ -55,6 +43,6 @@ If Play says version code `5` was already used, stop and increment the `+5` in `
 
 If your personal developer account was created after 13 November 2023, keep at least **12 testers opted in continuously for 14 days**. Aim for 15 so one dropout does not reset eligibility.
 
-## 5. Apply for production
+## 4. Apply for production
 
 After the closed-test requirement is satisfied, use **Apply for production** from the Play Console dashboard. Give specific, truthful answers about tester recruitment, engagement, feedback, and the fixes made during testing. Once approved, promote this release to production.

@@ -153,12 +153,16 @@ Use `UDPCore/store/screenshots/` only as a fallback because those images may sho
 
 ### 5. Publish and verify the privacy policy
 
-The policy is at `UDPCore/docs/privacy-policy.html`.
-
-Publish it with GitHub Pages from the repository's `master` branch and `/docs` directory. Verify the public URL in a private browser window before adding it to Play Console:
+The public policy source is maintained at:
 
 ```text
-https://mehdi-bahlaoui.github.io/UDPCore/privacy-policy.html
+/home/mehdi/Desktop/Endeavours/Projects/Website/udpcore_privacy_policy.html
+```
+
+Publish the Website repository and verify this URL in a private browser window before adding it to Play Console:
+
+```text
+https://mehdibahlaoui.com/udpcore_privacy_policy.html
 ```
 
 ## Play Console checklist

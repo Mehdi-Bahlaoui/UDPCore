@@ -7,7 +7,7 @@ class AboutThisApp extends StatelessWidget {
   const AboutThisApp({super.key, required this.onBackTap});
 
   static final _privacyPolicyUri = Uri.parse(
-    'https://mehdi-bahlaoui.github.io/UDPCore/privacy-policy.html',
+    'https://mehdibahlaoui.com/udpcore_privacy_policy.html',
   );
 
   static const _body =
