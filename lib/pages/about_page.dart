@@ -1,9 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AboutThisApp extends StatelessWidget {
   final VoidCallback onBackTap;
 
-  AboutThisApp({required this.onBackTap});
+  const AboutThisApp({super.key, required this.onBackTap});
+
+  static final _privacyPolicyUri = Uri.parse(
+    'https://mehdi-bahlaoui.github.io/UDPCore/privacy-policy.html',
+  );
+
+  static const _body =
+      "UDPCore started life as a UDP-only remote for ESP devices. UDP is a "
+      "connectionless protocol: it skips the handshake and the other round-trips "
+      "that add latency, at the cost of guaranteed delivery. For driving a robot "
+      "in real time, that is a trade worth making.\n\n"
+      "It has since grown past UDP. UDPCore now also speaks Bluetooth Classic, "
+      "and it ships two control surfaces:\n\n"
+      "  •  an arrow D-pad, for simple drive commands\n"
+      "  •  nine configurable sliders with hold buttons, for servos and finer control\n\n"
+      "The transport switch sits at the top left and the control-surface switch at "
+      "the top right, and they are independent — sliders over Wi-Fi, arrows over "
+      "Bluetooth, whatever your build needs.\n\n"
+      "Future updates include:\n\n"
+      "  1)  A richer reception panel for data coming back from the ESP "
+      "(sensor readings, for example).\n"
+      "  2)  More control surfaces, and saved presets per device.";
+
+  Future<void> _openPrivacyPolicy(BuildContext context) async {
+    final opened = await launchUrl(
+      _privacyPolicyUri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the privacy policy.')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,19 +52,32 @@ class AboutThisApp extends StatelessWidget {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(40.0),
-        child: Center(
-          child: Text(
-            "UDPCore is a fast and seamless ESP device control for robotics and IoT via the UDP Protocol.\n"
-                "UDP is a connectionless protocol meaning it doesn't waste time on the handshake and other useless operations that could affect latency.\n"
-                "UDP skips handshakes for minimal latency, though with reduced delivery reliability.\n"
-                "The purpose of this app was and will continue to be providing the fastest interface for interaction with microcontrollers of the ESP family and others, without the worry of latency.\n\n"
-                "Future Updates include:\n"
-                "1) Adding a reception label, to be able to receive Data from the Esp (ie. Sensor readings).\n"
-                "2) improved UI and addition of other controls like other buttons and sliders.\n\n"
-                "Thank you so much for supporting this project <3",
-            style: TextStyle(fontSize: 16),
-            textAlign: TextAlign.left,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(_body, style: TextStyle(fontSize: 16, height: 1.4)),
+            const SizedBox(height: 28),
+            const Divider(),
+            const SizedBox(height: 16),
+            Center(
+              child: TextButton.icon(
+                onPressed: () => _openPrivacyPolicy(context),
+                icon: const Icon(Icons.privacy_tip_outlined),
+                label: const Text('Privacy Policy'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Dedicated to the Roboticore Club of ENSAM Rabat, Morocco.",
+              style: TextStyle(
+                fontSize: 16,
+                fontStyle: FontStyle.italic,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );

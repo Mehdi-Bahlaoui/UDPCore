@@ -1,9 +1,9 @@
-name: UDPCore
+name: udpcore
 description: "UDPCore: Fast, seamless ESP device control for robotics and IoT via UDP."
 
 
 publish_to: 'none'
-version: 1.0.3+4
+version: 1.1.0+5
 
 
 
@@ -20,6 +20,7 @@ dependencies:
   shared_preferences: ^2.3.0
   flutter_bluetooth_serial: ^0.4.0
   permission_handler: ^11.3.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -27,7 +28,6 @@ dev_dependencies:
   flutter_launcher_icons: "^0.14.4"
 
   flutter_lints: ^6.0.0
-  shared_preferences: ^2.3.0
 
 flutter:
   uses-material-design: true
@@ -46,5 +46,5 @@ flutter:
 
 flutter_launcher_icons:
   android: "launcher_icon"
-  image_path: "images/icon.png"
+  image_path: "images/Icon.png"
   min_sdk_android: 21 # android min sdk min:16, default 21

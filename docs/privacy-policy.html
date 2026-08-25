@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UDPCore — Privacy Policy</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { max-width: 46rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem;
+         font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  h1 { font-size: 1.9rem; margin-bottom: .25rem; }
+  h2 { font-size: 1.15rem; margin-top: 2.25rem; }
+  .meta { opacity: .7; font-size: .9rem; margin-top: 0; }
+  ul { padding-left: 1.25rem; }
+  code { font-size: .9em; }
+  footer { margin-top: 3rem; font-size: .9rem; opacity: .7; }
+</style>
+</head>
+<body>
+
+<h1>Privacy Policy for UDPCore</h1>
+<p class="meta">Last updated: 24 August 2026</p>
+
+<p>UDPCore ("the app") is an Android application that sends control commands to
+microcontrollers and other hardware you own, either over UDP on your local
+Wi-Fi network or over a Bluetooth Classic connection. This policy explains what
+the app does and does not do with your information.</p>
+
+<h2>Summary</h2>
+<p><strong>UDPCore does not collect, store, transmit, or share any personal data.</strong>
+There are no user accounts, no analytics, no advertising, no crash reporting,
+and no third-party tracking of any kind. The developer has no server and
+receives no information from the app.</p>
+
+<h2>Information the app stores</h2>
+<p>The app saves your configuration on your device only, using Android's standard
+app-private storage. This includes:</p>
+<ul>
+  <li>The target IP address and port you enter</li>
+  <li>The command strings assigned to each control</li>
+  <li>The send interval and related transmission preferences</li>
+  <li>The name and Bluetooth address of a device you select, so it can reconnect</li>
+  <li>Your slider configuration and control-surface preference</li>
+</ul>
+<p>This data never leaves your device. It is not backed up to any service
+controlled by the developer, and it is deleted when you uninstall the app or
+clear its storage.</p>
+
+<h2>Information the app transmits</h2>
+<p>The only data the app sends is the control commands you trigger, and those
+go directly to the destination you configure yourself — an IP address on your
+local network, or a Bluetooth device you have paired. Nothing is routed through
+the developer or through any third party.</p>
+
+<h2>Permissions and why they are needed</h2>
+<ul>
+  <li><strong>Internet / Network state</strong> — to open a UDP socket and send
+      command packets to the device address you specify on your local network.</li>
+  <li><strong>Bluetooth (connect, scan)</strong> — to list paired devices, discover
+      nearby devices when you press Scan, and open a serial connection to the
+      device you choose.</li>
+  <li><strong>Approximate/precise location (Android 11 and older only)</strong> —
+      Android versions up to and including Android 11 require location permission
+      before an app is allowed to scan for nearby Bluetooth devices. UDPCore uses
+      it for that reason alone. The app does not read, record, store, or transmit
+      your location. On Android 12 and newer this permission is not requested at all.</li>
+</ul>
+
+<h2>Children</h2>
+<p>UDPCore is a hardware control utility and is not directed at children. It
+collects no data from any user, regardless of age.</p>
+
+<h2>Third-party services</h2>
+<p>The app uses open-source Flutter libraries for local storage, Bluetooth serial
+communication, and Android permission handling. None of them collect or transmit
+user data on the developer's behalf.</p>
+
+<h2>Changes to this policy</h2>
+<p>If this policy changes, the updated version will be posted at this same
+address with a revised date above.</p>
+
+<h2>Contact</h2>
+<p>Questions about this policy can be sent to
+<a href="mailto:mehdibahlaoui3@gmail.com">mehdibahlaoui3@gmail.com</a>.</p>
+
+<footer>UDPCore is dedicated to the Roboticore Club of ENSAM Rabat, Morocco.</footer>
+
+</body>
+</html>

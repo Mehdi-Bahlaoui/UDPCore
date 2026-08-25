@@ -14,19 +14,23 @@ void main() {
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]).then((_) {
-    runApp(MyApp());
+    runApp(const MyApp());
   });
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) =>
-      MaterialApp(debugShowCheckedModeBanner: false, home: MainApp());
+      const MaterialApp(debugShowCheckedModeBanner: false, home: MainApp());
 }
 
 class MainApp extends StatefulWidget {
+  const MainApp({super.key});
+
   @override
-  _MainAppState createState() => _MainAppState();
+  State<MainApp> createState() => _MainAppState();
 }
 
 class _MainAppState extends State<MainApp> {

@@ -88,6 +88,13 @@ class BluetoothService {
     }
   }
 
+  // Sends a 4-byte config packet: [0xFE][paramId][valLow][valHigh]
+  // value is int16 (can be negative, e.g. center offsets)
+  void sendConfigPacket(int paramId, int value) {
+    final v = value & 0xFFFF; // two's complement for negatives
+    sendRawBytes([0xFE, paramId, v & 0xFF, (v >> 8) & 0xFF]);
+  }
+
   // --- Discovery helpers (used by BluetoothSettingsPage) ---
 
   Future<List<BluetoothDevice>> getBondedDevices() async {

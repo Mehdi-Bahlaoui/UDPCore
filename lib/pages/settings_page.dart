@@ -6,14 +6,15 @@ class SettingsPage extends StatefulWidget {
   final Function(SettingsModel) onConnect;
   final VoidCallback onBackTap;
 
-  SettingsPage({
+  const SettingsPage({
+    super.key,
     required this.settings,
     required this.onConnect,
     required this.onBackTap,
   });
 
   @override
-  _SettingsPageState createState() => _SettingsPageState();
+  State<SettingsPage> createState() => _SettingsPageState();
 }
 
 class _SettingsPageState extends State<SettingsPage> {
@@ -30,12 +31,22 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _ipController = TextEditingController(text: widget.settings.targetIp);
-    _portController = TextEditingController(text: widget.settings.targetPort.toString());
-    _speedController = TextEditingController(text: widget.settings.speed.toString());
-    _forwardController = TextEditingController(text: widget.settings.forwardCommand);
+    _portController = TextEditingController(
+      text: widget.settings.targetPort.toString(),
+    );
+    _speedController = TextEditingController(
+      text: widget.settings.speed.toString(),
+    );
+    _forwardController = TextEditingController(
+      text: widget.settings.forwardCommand,
+    );
     _leftController = TextEditingController(text: widget.settings.leftCommand);
-    _backwardController = TextEditingController(text: widget.settings.backwardCommand);
-    _rightController = TextEditingController(text: widget.settings.rightCommand);
+    _backwardController = TextEditingController(
+      text: widget.settings.backwardCommand,
+    );
+    _rightController = TextEditingController(
+      text: widget.settings.rightCommand,
+    );
     _stopController = TextEditingController(text: widget.settings.stopCommand);
   }
 
@@ -43,23 +54,31 @@ class _SettingsPageState extends State<SettingsPage> {
   void dispose() {
     final settings = SettingsModel(
       targetIp: _ipController.text.trim(),
-      targetPort: int.tryParse(_portController.text.trim()) ?? widget.settings.targetPort,
-      speed: int.tryParse(_speedController.text.trim()) ?? widget.settings.speed,
-      forwardCommand: _forwardController.text.trim().isNotEmpty
-          ? _forwardController.text.trim()
-          : widget.settings.forwardCommand,
-      leftCommand: _leftController.text.trim().isNotEmpty
-          ? _leftController.text.trim()
-          : widget.settings.leftCommand,
-      backwardCommand: _backwardController.text.trim().isNotEmpty
-          ? _backwardController.text.trim()
-          : widget.settings.backwardCommand,
-      rightCommand: _rightController.text.trim().isNotEmpty
-          ? _rightController.text.trim()
-          : widget.settings.rightCommand,
-      stopCommand: _stopController.text.trim().isNotEmpty
-          ? _stopController.text.trim()
-          : widget.settings.stopCommand,
+      targetPort:
+          int.tryParse(_portController.text.trim()) ??
+          widget.settings.targetPort,
+      speed:
+          int.tryParse(_speedController.text.trim()) ?? widget.settings.speed,
+      forwardCommand:
+          _forwardController.text.trim().isNotEmpty
+              ? _forwardController.text.trim()
+              : widget.settings.forwardCommand,
+      leftCommand:
+          _leftController.text.trim().isNotEmpty
+              ? _leftController.text.trim()
+              : widget.settings.leftCommand,
+      backwardCommand:
+          _backwardController.text.trim().isNotEmpty
+              ? _backwardController.text.trim()
+              : widget.settings.backwardCommand,
+      rightCommand:
+          _rightController.text.trim().isNotEmpty
+              ? _rightController.text.trim()
+              : widget.settings.rightCommand,
+      stopCommand:
+          _stopController.text.trim().isNotEmpty
+              ? _stopController.text.trim()
+              : widget.settings.stopCommand,
     );
 
     widget.onConnect(settings);
@@ -104,11 +123,12 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               SizedBox(height: 10),
 
-
               TextField(
                 controller: _speedController,
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: "Hold Send Interval (ms)"),
+                decoration: InputDecoration(
+                  labelText: "Hold Send Interval (ms)",
+                ),
               ),
               SizedBox(height: 10),
 
@@ -122,10 +142,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
               // Command settings in table format
               Table(
-                columnWidths: {
-                  0: FlexColumnWidth(1),
-                  1: FlexColumnWidth(1),
-                },
+                columnWidths: {0: FlexColumnWidth(1), 1: FlexColumnWidth(1)},
                 children: [
                   TableRow(
                     children: [
@@ -133,14 +150,18 @@ class _SettingsPageState extends State<SettingsPage> {
                         padding: EdgeInsets.only(right: 8.0, bottom: 10.0),
                         child: TextField(
                           controller: _forwardController,
-                          decoration: InputDecoration(labelText: "Forward Command"),
+                          decoration: InputDecoration(
+                            labelText: "Forward Command",
+                          ),
                         ),
                       ),
                       Padding(
                         padding: EdgeInsets.only(left: 8.0, bottom: 10.0),
                         child: TextField(
                           controller: _leftController,
-                          decoration: InputDecoration(labelText: "Left Command"),
+                          decoration: InputDecoration(
+                            labelText: "Left Command",
+                          ),
                         ),
                       ),
                     ],
@@ -151,14 +172,18 @@ class _SettingsPageState extends State<SettingsPage> {
                         padding: EdgeInsets.only(right: 8.0, bottom: 10.0),
                         child: TextField(
                           controller: _backwardController,
-                          decoration: InputDecoration(labelText: "Backward Command"),
+                          decoration: InputDecoration(
+                            labelText: "Backward Command",
+                          ),
                         ),
                       ),
                       Padding(
                         padding: EdgeInsets.only(left: 8.0, bottom: 10.0),
                         child: TextField(
                           controller: _rightController,
-                          decoration: InputDecoration(labelText: "Right Command"),
+                          decoration: InputDecoration(
+                            labelText: "Right Command",
+                          ),
                         ),
                       ),
                     ],
@@ -169,7 +194,9 @@ class _SettingsPageState extends State<SettingsPage> {
                         padding: EdgeInsets.only(right: 8.0, bottom: 10.0),
                         child: TextField(
                           controller: _stopController,
-                          decoration: InputDecoration(labelText: "Stop Command"),
+                          decoration: InputDecoration(
+                            labelText: "Stop Command",
+                          ),
                         ),
                       ),
                       Padding(

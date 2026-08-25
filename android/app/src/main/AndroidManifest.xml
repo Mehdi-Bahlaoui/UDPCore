@@ -3,13 +3,14 @@
     <!-- UDP communication -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- Bluetooth Classic — legacy (API < 31) -->
     <uses-permission android:name="android.permission.BLUETOOTH"
-        android:maxSdkVersion="30" />
+        android:maxSdkVersion="30"
+        tools:node="replace" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
-        android:maxSdkVersion="30" />
+        android:maxSdkVersion="30"
+        tools:node="replace" />
 
     <!-- Bluetooth Classic — Android 12+ (API >= 31) -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
@@ -18,13 +19,22 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"
         tools:targetApi="s" />
 
-    <!-- Location required for BT discovery below API 31 -->
+    <!-- Location required for BT discovery below API 31.
+         flutter_bluetooth_serial's own manifest declares both location
+         permissions with no maxSdkVersion, which would merge in uncapped and
+         make the Play listing advertise Location on every Android version.
+         tools:node="replace" forces these capped declarations to win. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
-        android:maxSdkVersion="30" />
+        android:maxSdkVersion="30"
+        tools:node="replace" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="30"
+        tools:node="replace" />
 
     <application
         android:label="UDPCore"
-        android:icon="@mipmap/launcher_icon">
+        android:icon="@mipmap/launcher_icon"
+        android:allowBackup="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"
