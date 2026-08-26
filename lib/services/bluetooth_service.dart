@@ -2,8 +2,28 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'package:flutter/services.dart' show PlatformException;
 
 enum BluetoothConnectionStatus { disconnected, connecting, connected, error }
+
+class BluetoothPermissionException implements Exception {
+  final String message;
+
+  const BluetoothPermissionException(this.message);
+
+  @override
+  String toString() => message;
+}
+
+String describeBluetoothError(Object error) {
+  if (error is BluetoothPermissionException) return error.message;
+  if (error is PlatformException) {
+    return error.message?.trim().isNotEmpty == true
+        ? error.message!.trim()
+        : error.code;
+  }
+  return error.toString().replaceFirst('Exception: ', '');
+}
 
 class BluetoothService {
   final _statusController =
@@ -16,6 +36,9 @@ class BluetoothService {
 
   BluetoothConnectionStatus _status = BluetoothConnectionStatus.disconnected;
   BluetoothConnectionStatus get status => _status;
+
+  String? _lastError;
+  String? get lastError => _lastError;
 
   BluetoothConnection? _connection;
 
@@ -30,9 +53,11 @@ class BluetoothService {
   // --- Connection lifecycle ---
 
   Future<void> connect(String address) async {
-    if (isConnected) await disconnect();
-    _emit(BluetoothConnectionStatus.connecting);
+    _lastError = null;
     try {
+      await _requireConnectPermission();
+      if (isConnected) await disconnect();
+      _emit(BluetoothConnectionStatus.connecting);
       _connection = await BluetoothConnection.toAddress(address);
       _emit(BluetoothConnectionStatus.connected);
 
@@ -47,12 +72,14 @@ class BluetoothService {
           _connection = null;
           _emit(BluetoothConnectionStatus.disconnected);
         },
-        onError: (_) {
+        onError: (Object error) {
+          _lastError = describeBluetoothError(error);
           _connection = null;
           _emit(BluetoothConnectionStatus.error);
         },
       );
-    } catch (_) {
+    } catch (error) {
+      _lastError = describeBluetoothError(error);
       _connection = null;
       _emit(BluetoothConnectionStatus.error);
     }
@@ -63,6 +90,7 @@ class BluetoothService {
       await _connection?.close();
     } catch (_) {}
     _connection = null;
+    _lastError = null;
     _emit(BluetoothConnectionStatus.disconnected);
   }
 
@@ -72,7 +100,8 @@ class BluetoothService {
     if (!isConnected) return;
     try {
       _connection!.output.add(Uint8List.fromList(command.codeUnits));
-    } catch (_) {
+    } catch (error) {
+      _lastError = describeBluetoothError(error);
       _connection = null;
       _emit(BluetoothConnectionStatus.error);
     }
@@ -82,7 +111,8 @@ class BluetoothService {
     if (!isConnected) return;
     try {
       _connection!.output.add(Uint8List.fromList(bytes));
-    } catch (_) {
+    } catch (error) {
+      _lastError = describeBluetoothError(error);
       _connection = null;
       _emit(BluetoothConnectionStatus.error);
     }
@@ -98,11 +128,13 @@ class BluetoothService {
   // --- Discovery helpers (used by BluetoothSettingsPage) ---
 
   Future<List<BluetoothDevice>> getBondedDevices() async {
+    await _requireConnectPermission();
     return await FlutterBluetoothSerial.instance.getBondedDevices();
   }
 
-  Stream<BluetoothDiscoveryResult> startDiscovery() {
-    return FlutterBluetoothSerial.instance.startDiscovery();
+  Stream<BluetoothDiscoveryResult> startDiscovery() async* {
+    await _requireDiscoveryPermissions();
+    yield* FlutterBluetoothSerial.instance.startDiscovery();
   }
 
   Future<void> cancelDiscovery() async {
@@ -110,7 +142,28 @@ class BluetoothService {
   }
 
   Future<bool?> bondDevice(String address) async {
+    await _requireConnectPermission();
     return await FlutterBluetoothSerial.instance.bondDeviceAtAddress(address);
+  }
+
+  Future<void> _requireConnectPermission() async {
+    final granted =
+        await FlutterBluetoothSerial.instance.requestConnectPermissions();
+    if (!granted) {
+      throw const BluetoothPermissionException(
+        'Nearby Devices permission is required to use Bluetooth',
+      );
+    }
+  }
+
+  Future<void> _requireDiscoveryPermissions() async {
+    final granted =
+        await FlutterBluetoothSerial.instance.requestDiscoveryPermissions();
+    if (!granted) {
+      throw const BluetoothPermissionException(
+        'Allow Nearby Devices to scan on Android 12+, or Location on Android 11 and older',
+      );
+    }
   }
 
   // --- Cleanup ---

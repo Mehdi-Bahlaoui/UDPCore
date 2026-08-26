@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../models/settings_model.dart';
 import '../services/bluetooth_service.dart';
 
@@ -33,6 +32,7 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
   StreamSubscription<BluetoothDiscoveryResult>? _discoverySub;
   bool _isScanning = false;
   bool _isLoadingBonded = false;
+  String? _deviceError;
 
   String? _selectedAddress;
   String? _selectedName;
@@ -227,41 +227,37 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
   }
 
   Future<void> _loadBondedDevices() async {
-    setState(() => _isLoadingBonded = true);
+    if (mounted) {
+      setState(() {
+        _isLoadingBonded = true;
+        _deviceError = null;
+      });
+    }
     try {
       final devices = await widget.bluetoothService.getBondedDevices();
       if (mounted) setState(() => _bondedDevices = devices);
-    } catch (_) {}
+    } catch (error) {
+      if (mounted) {
+        setState(() => _deviceError = describeBluetoothError(error));
+      }
+    }
     if (mounted) setState(() => _isLoadingBonded = false);
   }
 
-  Future<bool> _requestPermissions() async {
-    final statuses =
-        await [
-          Permission.bluetoothScan,
-          Permission.bluetoothConnect,
-          Permission.location,
-        ].request();
-    final btGranted =
-        (statuses[Permission.bluetoothScan]?.isGranted ?? false) &&
-        (statuses[Permission.bluetoothConnect]?.isGranted ?? false);
-    final locGranted = statuses[Permission.location]?.isGranted ?? false;
-    return btGranted || locGranted;
+  void _showBluetoothError(Object error) {
+    if (!mounted) return;
+    final message = describeBluetoothError(error);
+    setState(() => _deviceError = message);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _startScan() async {
-    final granted = await _requestPermissions();
-    if (!granted) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bluetooth/location permission denied')),
-        );
-      }
-      return;
-    }
     setState(() {
       _isScanning = true;
       _discoveredDevices.clear();
+      _deviceError = null;
     });
     _discoverySub?.cancel();
     _discoverySub = widget.bluetoothService.startDiscovery().listen(
@@ -278,21 +274,27 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
       onDone: () {
         if (mounted) setState(() => _isScanning = false);
       },
-      onError: (_) {
-        if (mounted) setState(() => _isScanning = false);
+      onError: (Object error) {
+        if (mounted) {
+          setState(() => _isScanning = false);
+          _showBluetoothError(error);
+        }
       },
     );
   }
 
   Future<void> _stopScan() async {
-    await widget.bluetoothService.cancelDiscovery();
-    _discoverySub?.cancel();
-    if (mounted) setState(() => _isScanning = false);
+    try {
+      await widget.bluetoothService.cancelDiscovery();
+      await _discoverySub?.cancel();
+    } catch (error) {
+      _showBluetoothError(error);
+    } finally {
+      if (mounted) setState(() => _isScanning = false);
+    }
   }
 
   Future<void> _pairDevice(BluetoothDevice device) async {
-    final granted = await _requestPermissions();
-    if (!granted) return;
     try {
       final bonded = await widget.bluetoothService.bondDevice(device.address);
       if (bonded == true) {
@@ -305,7 +307,9 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
           );
         }
       }
-    } catch (_) {}
+    } catch (error) {
+      _showBluetoothError(error);
+    }
   }
 
   Future<void> _connectDevice(BluetoothDevice device) async {
@@ -315,6 +319,8 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
         _selectedAddress = device.address;
         _selectedName = device.name ?? device.address;
       });
+    } else if (widget.bluetoothService.lastError != null) {
+      _showBluetoothError(widget.bluetoothService.lastError!);
     }
   }
 
@@ -342,7 +348,7 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
       case BluetoothConnectionStatus.connecting:
         return 'Connecting...';
       case BluetoothConnectionStatus.error:
-        return 'Connection error';
+        return widget.bluetoothService.lastError ?? 'Connection error';
       case BluetoothConnectionStatus.disconnected:
         return _selectedAddress != null
             ? 'Selected: $_selectedName (not connected)'
@@ -442,6 +448,13 @@ class _BluetoothSettingsPageState extends State<BluetoothSettingsPage> {
       children: [
         _buildStatusBar(),
         const SizedBox(height: 12),
+        if (_deviceError != null) ...[
+          Text(
+            _deviceError!,
+            style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+        ],
 
         // Bonded devices
         Row(

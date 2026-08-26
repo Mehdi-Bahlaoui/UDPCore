@@ -326,6 +326,10 @@ class _ControllerPageState extends State<ControllerPage> {
       return "$_udpStatus | ${widget.settings.targetIp}:${widget.settings.targetPort}";
     }
     final name = widget.settings.btDeviceName ?? 'No device';
+    if (_btStatus == BluetoothConnectionStatus.error &&
+        widget.bluetoothService.lastError != null) {
+      return "BT: ${widget.bluetoothService.lastError} | $name";
+    }
     return "BT: ${_btStatus.name} | $name";
   }
 

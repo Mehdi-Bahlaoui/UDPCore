@@ -43,7 +43,7 @@ The app allows you to configure:
 <img width="1544" height="720" alt="Image" src="https://github.com/user-attachments/assets/fed810d3-b4fb-41d0-9d95-5888cd76cf79" />
 
 ## Privacy Policy
-https://mehdibahlaoui.pro/udpcore_privacy_policy
+https://mehdibahlaoui.com/udpcore_privacy_policy.html
 
 ## License
 GPL-3.0
